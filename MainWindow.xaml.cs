@@ -23,7 +23,7 @@ namespace LoboEstepario
     public partial class MainWindow : Window
     {
         private readonly ICollectionView companiesView;
-        private static readonly HttpClient ApiClient = new HttpClient();
+        private static readonly HttpClient ApiClient = CreateApiClient();
         private static readonly HttpClient GeocodingClient = CreateGeocodingClient();
         private readonly JavaScriptSerializer json = new JavaScriptSerializer();
         private double selectedLongitude = -103.349;
@@ -53,6 +53,12 @@ namespace LoboEstepario
             var client = new HttpClient();
             client.DefaultRequestHeaders.UserAgent.ParseAdd("LoboEstepario-Desktop/0.1");
             return client;
+        }
+
+        private static HttpClient CreateApiClient()
+        {
+            var configuredBaseUrl = ConfigurationManager.AppSettings["ApiBaseUrl"] ?? "http://localhost:5080/";
+            return new HttpClient { BaseAddress = new Uri(configuredBaseUrl) };
         }
 
         private bool MatchesSearch(object item)
@@ -112,6 +118,7 @@ namespace LoboEstepario
 
         private void ConfigureMap()
         {
+            GMapProvider.UserAgent = "LoboEstepario-Desktop/0.1";
             MapControl.MapProvider = GMapProviders.OpenStreetMap;
             MapControl.MinZoom = 2;
             MapControl.MaxZoom = 18;
@@ -267,12 +274,20 @@ namespace LoboEstepario
             return item != null && int.TryParse(item.Tag as string, out radius) ? radius : 5;
         }
 
+        // El Tag de cada ComboBoxItem guarda el basic_category real de Overture (en ingles);
+        // el Content es solo la etiqueta en espanol que ve el usuario.
+        private string SelectedCategorySlug()
+        {
+            var item = CategoryBox == null ? null : CategoryBox.SelectedItem as ComboBoxItem;
+            return item == null ? string.Empty : (item.Tag as string ?? string.Empty);
+        }
+
         private async void RunSearch_Click(object sender, RoutedEventArgs e)
         {
             var radiusKm = SelectedRadiusKilometers();
             var latitudeDelta = radiusKm / 111.32;
             var longitudeDelta = radiusKm / (111.32 * Math.Cos(selectedLatitude * Math.PI / 180));
-            var category = CategoryBox == null ? string.Empty : CategoryBox.Text.Trim();
+            var category = SelectedCategorySlug();
             var name = BusinessNameBox == null ? string.Empty : BusinessNameBox.Text.Trim();
             var requestUri = string.Format(CultureInfo.InvariantCulture,
                 "api/places?minLongitude={0}&minLatitude={1}&maxLongitude={2}&maxLatitude={3}&limit=100{4}{5}",
@@ -285,8 +300,6 @@ namespace LoboEstepario
             {
                 SearchButton.IsEnabled = false;
                 StatusText.Text = "Consultando Overture mediante la API local…";
-                var configuredBaseUrl = ConfigurationManager.AppSettings["ApiBaseUrl"] ?? "http://localhost:5080/";
-                ApiClient.BaseAddress = new Uri(configuredBaseUrl);
                 var response = await ApiClient.GetAsync(requestUri);
                 response.EnsureSuccessStatusCode();
                 var payload = json.Deserialize<PlacesResponse>(await response.Content.ReadAsStringAsync());
@@ -315,8 +328,6 @@ namespace LoboEstepario
             {
                 SavedBusinessesButton.IsEnabled = false;
                 StatusText.Text = "Cargando negocios guardados desde MongoDB…";
-                var configuredBaseUrl = ConfigurationManager.AppSettings["ApiBaseUrl"] ?? "http://localhost:5080/";
-                ApiClient.BaseAddress = new Uri(configuredBaseUrl);
                 var response = await ApiClient.GetAsync("api/business?limit=1000");
                 response.EnsureSuccessStatusCode();
                 var places = json.Deserialize<PlaceDto[]>(await response.Content.ReadAsStringAsync()) ?? new PlaceDto[0];
@@ -342,7 +353,7 @@ namespace LoboEstepario
             var radiusKm = SelectedRadiusKilometers();
             var latitudeDelta = radiusKm / 111.32;
             var longitudeDelta = radiusKm / (111.32 * Math.Cos(selectedLatitude * Math.PI / 180));
-            var category = CategoryBox == null ? string.Empty : CategoryBox.Text.Trim();
+            var category = SelectedCategorySlug();
             var name = BusinessNameBox == null ? string.Empty : BusinessNameBox.Text.Trim();
             var requestUri = string.Format(CultureInfo.InvariantCulture,
                 "api/business/scrape?minLongitude={0}&minLatitude={1}&maxLongitude={2}&maxLatitude={3}&limit=100{4}{5}",
@@ -355,8 +366,6 @@ namespace LoboEstepario
             {
                 ScrapeButton.IsEnabled = false;
                 StatusText.Text = "Scrapeando Overture y guardando en MongoDB…";
-                var configuredBaseUrl = ConfigurationManager.AppSettings["ApiBaseUrl"] ?? "http://localhost:5080/";
-                ApiClient.BaseAddress = new Uri(configuredBaseUrl);
                 var response = await ApiClient.PostAsync(requestUri, null);
                 response.EnsureSuccessStatusCode();
                 var result = json.Deserialize<ScrapeResultDto>(await response.Content.ReadAsStringAsync());
@@ -379,8 +388,6 @@ namespace LoboEstepario
         {
             try
             {
-                var configuredBaseUrl = ConfigurationManager.AppSettings["ApiBaseUrl"] ?? "http://localhost:5080/";
-                ApiClient.BaseAddress = new Uri(configuredBaseUrl);
                 var response = await ApiClient.GetAsync("api/business/stats");
                 response.EnsureSuccessStatusCode();
                 var stats = json.Deserialize<BusinessStatsDto>(await response.Content.ReadAsStringAsync());
@@ -394,7 +401,7 @@ namespace LoboEstepario
                 if (StatLastRun != null)
                 {
                     StatLastRun.Text = DateTime.TryParse(stats.LastScrapedAtUtc, CultureInfo.InvariantCulture,
-                        DateTimeStyles.RoundtripKind | DateTimeStyles.AssumeUniversal, out lastRunUtc)
+                        DateTimeStyles.RoundtripKind, out lastRunUtc)
                         ? FormatLastRun(lastRunUtc)
                         : "Sin ejecuciones";
                 }
