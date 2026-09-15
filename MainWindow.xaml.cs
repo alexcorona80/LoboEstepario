@@ -102,7 +102,19 @@ namespace LoboEstepario
         private void Navigation_Click(object sender, RoutedEventArgs e)
         {
             var button = sender as Button;
+            if (button != null && string.Equals(button.Tag as string, "CRM", StringComparison.OrdinalIgnoreCase))
+            {
+                new CrmWindow { Owner = this }.Show();
+                return;
+            }
             StatusText.Text = string.Format("La sección {0} estará disponible al conectar los datos.", button == null ? "seleccionada" : button.Tag);
+        }
+
+        private void CompaniesGrid_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            var company = CompaniesGrid.SelectedItem as Company;
+            if (company == null) return;
+            new CrmWindow(company.Name) { Owner = this }.Show();
         }
 
         private void NewSearch_Click(object sender, RoutedEventArgs e)
