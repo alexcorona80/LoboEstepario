@@ -37,7 +37,6 @@ namespace LoboEstepario
 
             Loaded += async (sender, args) =>
             {
-                LoadSavedAccount();
                 await LoadRecipientsAsync();
                 await LoadHistoryAsync();
                 await LoadStatsAsync();
@@ -56,80 +55,10 @@ namespace LoboEstepario
             return serializer;
         }
 
-        private void LoadSavedAccount()
+        private static string GetSetting(string key)
         {
-            var host = ConfigurationManager.AppSettings["CrmSmtpHost"];
-            var port = ConfigurationManager.AppSettings["CrmSmtpPort"];
-            var user = ConfigurationManager.AppSettings["CrmSmtpUser"];
-            var pass = ConfigurationManager.AppSettings["CrmSmtpPassword"];
-            var from = ConfigurationManager.AppSettings["CrmSmtpFromName"];
-            var sslValue = ConfigurationManager.AppSettings["CrmSmtpUseSsl"];
-
-            SmtpHostBox.Text = string.IsNullOrWhiteSpace(host) ? string.Empty : host;
-            SmtpPortBox.Text = string.IsNullOrWhiteSpace(port) ? "587" : port;
-            SmtpUserBox.Text = user ?? string.Empty;
-            SmtpPasswordBox.Password = pass ?? string.Empty;
-            FromNameBox.Text = from ?? string.Empty;
-            UseSslBox.IsChecked = !string.Equals(sslValue, "False", StringComparison.OrdinalIgnoreCase);
-
-            MatchProvider(host ?? string.Empty);
-        }
-
-        private void MatchProvider(string host)
-        {
-            var index = host.ToLowerInvariant().Contains("gmail") ? 0
-                : host.ToLowerInvariant().Contains("office365") ? 1
-                : host.ToLowerInvariant().Contains("yahoo") ? 2
-                : 3;
-            ProviderBox.SelectionChanged -= ProviderBox_SelectionChanged;
-            ProviderBox.SelectedIndex = index;
-            ProviderBox.SelectionChanged += ProviderBox_SelectionChanged;
-        }
-
-        private void ProviderBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            if (ProviderBox.SelectedIndex == -1) return;
-            switch (ProviderBox.SelectedIndex)
-            {
-                case 0:
-                    SmtpHostBox.Text = "smtp.gmail.com";
-                    SmtpPortBox.Text = "587";
-                    UseSslBox.IsChecked = true;
-                    break;
-                case 1:
-                    SmtpHostBox.Text = "smtp.office365.com";
-                    SmtpPortBox.Text = "587";
-                    UseSslBox.IsChecked = true;
-                    break;
-                case 2:
-                    SmtpHostBox.Text = "smtp.mail.yahoo.com";
-                    SmtpPortBox.Text = "587";
-                    UseSslBox.IsChecked = true;
-                    break;
-                case 3:
-                    break;
-            }
-        }
-
-        private void SaveAccount_Click(object sender, RoutedEventArgs e)
-        {
-            try
-            {
-                var config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
-                config.AppSettings.Settings["CrmSmtpHost"].Value = SmtpHostBox.Text.Trim();
-                config.AppSettings.Settings["CrmSmtpPort"].Value = string.IsNullOrWhiteSpace(SmtpPortBox.Text) ? "587" : SmtpPortBox.Text.Trim();
-                config.AppSettings.Settings["CrmSmtpUser"].Value = SmtpUserBox.Text.Trim();
-                config.AppSettings.Settings["CrmSmtpPassword"].Value = SmtpPasswordBox.Password;
-                config.AppSettings.Settings["CrmSmtpFromName"].Value = FromNameBox.Text.Trim();
-                config.AppSettings.Settings["CrmSmtpUseSsl"].Value = (UseSslBox.IsChecked ?? true).ToString();
-                config.Save(ConfigurationSaveMode.Modified);
-                ConfigurationManager.RefreshSection("appSettings");
-                StatusText.Text = "Cuenta de correo guardada.";
-            }
-            catch (Exception ex)
-            {
-                StatusText.Text = "No fue posible guardar la cuenta: " + ex.Message;
-            }
+            var value = ConfigurationManager.AppSettings[key];
+            return string.IsNullOrWhiteSpace(value) ? string.Empty : value;
         }
 
         private bool MatchesRecipientSearch(object item)
@@ -270,51 +199,19 @@ namespace LoboEstepario
             return string.Join(", ", new[] { locality, region, country }.Where(value => !string.IsNullOrWhiteSpace(value)));
         }
 
-        private SmtpConfigDto CurrentSmtp()
+        private static SmtpConfigDto CurrentSmtp()
         {
             int port = 587;
-            int.TryParse(SmtpPortBox.Text.Trim(), out port);
+            int.TryParse(ConfigurationManager.AppSettings["CrmSmtpPort"] ?? "587", out port);
             return new SmtpConfigDto
             {
-                Host = SmtpHostBox.Text.Trim(),
+                Host = GetSetting("CrmSmtpHost"),
                 Port = port,
-                Username = SmtpUserBox.Text.Trim(),
-                Password = SmtpPasswordBox.Password,
-                FromName = FromNameBox.Text.Trim(),
-                EnableSsl = UseSslBox.IsChecked ?? true,
+                Username = GetSetting("CrmSmtpUser"),
+                Password = GetSetting("CrmSmtpPassword"),
+                FromName = GetSetting("CrmSmtpFromName"),
+                EnableSsl = !string.Equals(ConfigurationManager.AppSettings["CrmSmtpUseSsl"], "False", StringComparison.OrdinalIgnoreCase),
             };
-        }
-
-        private async void SendTest_Click(object sender, RoutedEventArgs e)
-        {
-            var smtp = CurrentSmtp();
-            if (string.IsNullOrWhiteSpace(smtp.Host) || string.IsNullOrWhiteSpace(smtp.Username) || string.IsNullOrWhiteSpace(smtp.Password))
-            {
-                StatusText.Text = "Completa host, usuario y contraseña antes de probar.";
-                return;
-            }
-
-            try
-            {
-                SendButton.IsEnabled = false;
-                StatusText.Text = "Enviando correo de prueba…";
-                var request = json.Serialize(new TestEmailRequestDto { Smtp = smtp, ToEmail = smtp.Username });
-                var response = await ApiClient.PostAsync("api/crm/test", new StringContent(request, Encoding.UTF8, "application/json"));
-                response.EnsureSuccessStatusCode();
-                var result = json.Deserialize<EmailTestResponseDto>(await response.Content.ReadAsStringAsync());
-                if (result != null && result.Success)
-                    StatusText.Text = "Correo de prueba enviado a " + smtp.Username + ". Revisa la bandeja.";
-                else
-                    StatusText.Text = "Prueba fallida: " + (result == null ? "sin respuesta" : result.Error);
-            }
-            catch (Exception ex)
-            {
-                StatusText.Text = "No fue posible probar el correo: " + ex.Message;
-            }
-            finally
-            {
-                SendButton.IsEnabled = true;
-            }
         }
 
         private async void SendEmails_Click(object sender, RoutedEventArgs e)

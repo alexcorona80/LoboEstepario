@@ -68,13 +68,17 @@ namespace LoboEstepario
             var country = CountryBox == null ? string.Empty : CountryBox.Text.Trim();
             var region = RegionBox == null ? string.Empty : RegionBox.Text.Trim();
             var city = CityBox == null ? string.Empty : CityBox.Text.Trim();
+            var onlyEmail = OnlyEmailBox != null && (OnlyEmailBox.IsChecked ?? false);
+            var onlyPhone = OnlyPhoneBox != null && (OnlyPhoneBox.IsChecked ?? false);
             return company != null && (string.IsNullOrWhiteSpace(query)
                 || company.Name.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0
                 || company.Industry.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0
                 || company.Location.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0)
                 && Contains(company.Country, country)
                 && Contains(company.Region, region)
-                && Contains(company.City, city);
+                && Contains(company.City, city)
+                && (!onlyEmail || company.HasEmail)
+                && (!onlyPhone || company.HasPhone);
         }
 
         private static bool Contains(string value, string query) => string.IsNullOrWhiteSpace(query)
@@ -94,6 +98,13 @@ namespace LoboEstepario
             UpdateResultCount();
         }
 
+        private void ContactFilter_Changed(object sender, RoutedEventArgs e)
+        {
+            if (companiesView == null) return;
+            companiesView.Refresh();
+            UpdateResultCount();
+        }
+
         private void UpdateResultCount()
         {
             if (ResultCount != null) ResultCount.Text = string.Format("{0} resultados", companiesView == null ? Companies.Count : companiesView.Cast<object>().Count());
@@ -105,6 +116,16 @@ namespace LoboEstepario
             if (button != null && string.Equals(button.Tag as string, "CRM", StringComparison.OrdinalIgnoreCase))
             {
                 new CrmWindow { Owner = this }.Show();
+                return;
+            }
+            if (button != null && string.Equals(button.Tag as string, "Redes sociales", StringComparison.OrdinalIgnoreCase))
+            {
+                new SocialWindow { Owner = this }.Show();
+                return;
+            }
+            if (button != null && string.Equals(button.Tag as string, "Configuración", StringComparison.OrdinalIgnoreCase))
+            {
+                new ConfigWindow { Owner = this }.Show();
                 return;
             }
             StatusText.Text = string.Format("La sección {0} estará disponible al conectar los datos.", button == null ? "seleccionada" : button.Tag);
@@ -434,9 +455,12 @@ namespace LoboEstepario
 
         private static Company FromPlace(PlaceDto place, string source)
         {
+            var email = FirstNonEmpty(place.Emails);
+            var phone = FirstNonEmpty(place.Phones);
             return new Company(place.Name ?? "Sin nombre", place.MainCategory ?? place.DetailedCategory ?? "Sin categoría",
-                JoinLocation(place.Locality, place.Region, place.Country), FirstOrDefault(place.Emails, place.Phones, place.Websites), source,
-                place.Country, place.Region, place.Locality);
+                JoinLocation(place.Locality, place.Region, place.Country),
+                email ?? phone ?? FirstNonEmpty(place.Websites) ?? "Sin contacto", source,
+                place.Country, place.Region, place.Locality, email, phone);
         }
 
         private static string JoinLocation(string locality, string region, string country)
@@ -447,6 +471,11 @@ namespace LoboEstepario
         private static string FirstOrDefault(string[] emails, string[] phones, string[] websites)
         {
             return (emails ?? new string[0]).FirstOrDefault() ?? (phones ?? new string[0]).FirstOrDefault() ?? (websites ?? new string[0]).FirstOrDefault() ?? "Sin contacto";
+        }
+
+        private static string FirstNonEmpty(string[] values)
+        {
+            return (values ?? new string[0]).FirstOrDefault(v => !string.IsNullOrWhiteSpace(v));
         }
 
         private void TitleBar_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -482,9 +511,10 @@ namespace LoboEstepario
 
     public sealed class Company
     {
-        public Company(string name, string industry, string location, string contact, string source, string country = null, string region = null, string city = null)
+        public Company(string name, string industry, string location, string contact, string source, string country = null, string region = null, string city = null, string email = null, string phone = null)
         {
             Name = name; Industry = industry; Location = location; Contact = contact; Source = source; Country = country; Region = region; City = city;
+            Email = email; Phone = phone;
         }
         public string Name { get; private set; }
         public string Industry { get; private set; }
@@ -494,6 +524,10 @@ namespace LoboEstepario
         public string Country { get; private set; }
         public string Region { get; private set; }
         public string City { get; private set; }
+        public string Email { get; private set; }
+        public string Phone { get; private set; }
+        public bool HasEmail => !string.IsNullOrWhiteSpace(Email);
+        public bool HasPhone => !string.IsNullOrWhiteSpace(Phone);
     }
 
     public sealed class PlacesResponse
