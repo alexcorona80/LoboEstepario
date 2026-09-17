@@ -4,11 +4,14 @@ using System.Collections.ObjectModel;
 using System.Configuration;
 using System.ComponentModel;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Text;
 using System.Threading.Tasks;
 using System.Web.Script.Serialization;
 using System.Windows;
+using Microsoft.Win32;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
@@ -128,6 +131,26 @@ namespace LoboEstepario
                 new ConfigWindow { Owner = this }.Show();
                 return;
             }
+            if (button != null && string.Equals(button.Tag as string, "Fuentes", StringComparison.OrdinalIgnoreCase))
+            {
+                new FuentesWindow { Owner = this }.Show();
+                return;
+            }
+            if (button != null && string.Equals(button.Tag as string, "Ejecuciones", StringComparison.OrdinalIgnoreCase))
+            {
+                new EjecucionesWindow { Owner = this }.Show();
+                return;
+            }
+            if (button != null && string.Equals(button.Tag as string, "Inicio", StringComparison.OrdinalIgnoreCase))
+            {
+                StatusText.Text = "Estás en el panel de inicio.";
+                return;
+            }
+            if (button != null && string.Equals(button.Tag as string, "Buscar negocios", StringComparison.OrdinalIgnoreCase))
+            {
+                StatusText.Text = "Configura la búsqueda y delimita el radio sobre el mapa para prospectar.";
+                return;
+            }
             StatusText.Text = string.Format("La sección {0} estará disponible al conectar los datos.", button == null ? "seleccionada" : button.Tag);
         }
 
@@ -146,7 +169,48 @@ namespace LoboEstepario
 
         private void Export_Click(object sender, RoutedEventArgs e)
         {
-            StatusText.Text = "La exportación se habilitará al conectar el repositorio de empresas.";
+            var companies = (companiesView != null ? companiesView.Cast<Company>() : Companies).ToList();
+            if (companies.Count == 0)
+            {
+                StatusText.Text = "No hay resultados para exportar. Ejecuta una búsqueda primero.";
+                return;
+            }
+
+            var dialog = new SaveFileDialog
+            {
+                Title = "Exportar resultados",
+                Filter = "CSV (delimitado por punto y coma)|*.csv",
+                FileName = "negocios.csv",
+                AddExtension = true,
+                DefaultExt = ".csv",
+            };
+            if (dialog.ShowDialog(this) != true) return;
+
+            try
+            {
+                var builder = new StringBuilder();
+                builder.AppendLine("Empresa;Sector;Ubicacion;Correo;Telefono;Contacto;Fuente");
+                foreach (var company in companies)
+                {
+                    builder.AppendLine(string.Join(";",
+                        CsvField(company.Name), CsvField(company.Industry), CsvField(company.Location),
+                        CsvField(company.Email), CsvField(company.Phone), CsvField(company.Contact), CsvField(company.Source)));
+                }
+                File.WriteAllText(dialog.FileName, builder.ToString(), new UTF8Encoding(true));
+                StatusText.Text = string.Format("Exportados {0} resultado{1} a {2}.", companies.Count, companies.Count == 1 ? string.Empty : "s", dialog.FileName);
+            }
+            catch (Exception ex)
+            {
+                StatusText.Text = "No fue posible exportar: " + ex.Message;
+            }
+        }
+
+        private static string CsvField(string value)
+        {
+            value = value ?? string.Empty;
+            if (value.IndexOfAny(new[] { ';', '"', '\n', '\r' }) >= 0)
+                return "\"" + value.Replace("\"", "\"\"") + "\"";
+            return value;
         }
 
         private void ConfigureMap()
@@ -222,7 +286,7 @@ namespace LoboEstepario
             radiusPolygon = new GMapPolygon(circlePoints);
             MapControl.Markers.Add(radiusPolygon);
             MapControl.RegenerateShape(radiusPolygon);
-            var radiusShape = radiusPolygon.Shape as Path;
+            var radiusShape = radiusPolygon.Shape as System.Windows.Shapes.Path;
             if (radiusShape != null)
             {
                 radiusShape.Fill = new SolidColorBrush(Color.FromArgb(60, 226, 166, 61));
@@ -421,22 +485,46 @@ namespace LoboEstepario
         {
             try
             {
-                var response = await ApiClient.GetAsync("api/business/stats");
-                response.EnsureSuccessStatusCode();
-                var stats = json.Deserialize<BusinessStatsDto>(await response.Content.ReadAsStringAsync());
-                if (stats == null) return;
+                var businessTask = ApiClient.GetAsync("api/business/stats");
+                var emailTask = ApiClient.GetAsync("api/crm/stats");
+                await Task.WhenAll(businessTask, emailTask);
 
-                if (StatTotalCompanies != null) StatTotalCompanies.Text = stats.TotalCount.ToString("N0", CultureInfo.InvariantCulture);
-                if (StatWithContact != null) StatWithContact.Text = stats.WithContactCount.ToString("N0", CultureInfo.InvariantCulture);
-                if (StatActiveSources != null) StatActiveSources.Text = stats.ActiveSourceCount.ToString(CultureInfo.InvariantCulture);
-
-                DateTime lastRunUtc;
-                if (StatLastRun != null)
+                var businessResponse = businessTask.Result;
+                businessResponse.EnsureSuccessStatusCode();
+                var stats = json.Deserialize<BusinessStatsDto>(await businessResponse.Content.ReadAsStringAsync());
+                if (stats != null)
                 {
-                    StatLastRun.Text = DateTime.TryParse(stats.LastScrapedAtUtc, CultureInfo.InvariantCulture,
-                        DateTimeStyles.RoundtripKind, out lastRunUtc)
-                        ? FormatLastRun(lastRunUtc)
-                        : "Sin ejecuciones";
+                    if (StatTotalCompanies != null) StatTotalCompanies.Text = stats.TotalCount.ToString("N0", CultureInfo.InvariantCulture);
+                    if (StatWithContact != null) StatWithContact.Text = stats.WithContactCount.ToString("N0", CultureInfo.InvariantCulture);
+                    if (StatActiveSources != null) StatActiveSources.Text = stats.ActiveSourceCount.ToString(CultureInfo.InvariantCulture);
+
+                    DateTime lastRunUtc;
+                    if (StatLastRun != null)
+                    {
+                        StatLastRun.Text = DateTime.TryParse(stats.LastScrapedAtUtc, CultureInfo.InvariantCulture,
+                            DateTimeStyles.RoundtripKind, out lastRunUtc)
+                            ? FormatLastRun(lastRunUtc)
+                            : "Sin ejecuciones";
+                    }
+                }
+
+                var emailResponse = emailTask.Result;
+                emailResponse.EnsureSuccessStatusCode();
+                var emailStats = json.Deserialize<EmailStatsDto>(await emailResponse.Content.ReadAsStringAsync());
+                if (emailStats != null)
+                {
+                    if (StatEmailsSent != null) StatEmailsSent.Text = emailStats.SentCount.ToString("N0", CultureInfo.InvariantCulture);
+                    if (StatEmailsFailed != null) StatEmailsFailed.Text = emailStats.FailedCount.ToString("N0", CultureInfo.InvariantCulture);
+                    if (StatBusinessesWithEmail != null) StatBusinessesWithEmail.Text = emailStats.BusinessesWithEmailCount.ToString("N0", CultureInfo.InvariantCulture);
+
+                    DateTime lastEmailUtc;
+                    if (StatLastEmail != null)
+                    {
+                        StatLastEmail.Text = DateTime.TryParse(emailStats.LastSentAtUtc, CultureInfo.InvariantCulture,
+                            DateTimeStyles.RoundtripKind, out lastEmailUtc)
+                            ? FormatLastRun(lastEmailUtc)
+                            : "Sin envíos";
+                    }
                 }
             }
             catch (Exception ex)
