@@ -1,0 +1,54 @@
+<UserControl x:Class="LoboEstepario.Pages.EjecucionesPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <StackPanel>
+    <StackPanel Margin="0,0,0,24">
+      <TextBlock Text="ACTIVIDAD" Style="{StaticResource Eyebrow}"/>
+      <TextBlock Text="Ejecuciones" Style="{StaticResource PageTitle}"/>
+      <TextBlock Style="{StaticResource PageLead}"
+                 Text="Resumen de las últimas ejecuciones del sistema: prospección (scrape a Overture) y envíos de correo del CRM. Los detalles de cada envío se consultan en el módulo CRM."/>
+    </StackPanel>
+
+    <Border x:Name="LoadingPanel" Style="{StaticResource EmptyState}">
+      <StackPanel HorizontalAlignment="Center">
+        <TextBlock Text="⟳" FontSize="28" HorizontalAlignment="Center" Foreground="{StaticResource GoldBrush}"/>
+        <TextBlock x:Name="LoadingTitle" Text="Cargando actividad…" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,8,0,4" Foreground="{StaticResource TextSoftBrush}"/>
+        <TextBlock x:Name="LoadingDetail" Text="Consultando las estadísticas guardadas." HorizontalAlignment="Center"/>
+      </StackPanel>
+    </Border>
+
+    <Border x:Name="ErrorPanel" Style="{StaticResource AlertErr}" Visibility="Collapsed">
+      <StackPanel>
+        <TextBlock Text="No se pudo cargar la actividad" FontWeight="Bold" Foreground="{StaticResource TextBrush}"/>
+        <TextBlock x:Name="ErrorDetail" TextWrapping="Wrap" Margin="0,4,0,10" Foreground="{StaticResource TextSoftBrush}"/>
+        <Button Content="Reintentar" Click="Retry_Click" HorizontalAlignment="Left" Style="{StaticResource SmallButton}"/>
+      </StackPanel>
+    </Border>
+
+    <StackPanel x:Name="ContentPanel" Visibility="Collapsed">
+      <UniformGrid x:Name="StatGrid" Columns="4" Margin="0,0,-16,0"/>
+
+      <Border Style="{StaticResource Card}" Margin="0,4,0,0">
+        <StackPanel>
+          <DockPanel Margin="0,0,0,14">
+            <TextBlock DockPanel.Dock="Right" Text="flujo de trabajo actual" Style="{StaticResource Hint}" VerticalAlignment="Center"/>
+            <TextBlock Text="¿Cómo se ejecutan los procesos?" Style="{StaticResource SectionTitle}"/>
+          </DockPanel>
+          <TextBlock TextWrapping="Wrap" Foreground="{StaticResource MutedBrush}" Margin="0,0,0,10">
+            <Run Text="La prospección se dispara desde"/>
+            <Hyperlink Foreground="{StaticResource GoldHiBrush}" Click="Go_Negocios">Buscar negocios</Hyperlink>
+            <Run Text="con el botón «Guardar en la base»: la API consulta Overture alrededor del centro y radio elegidos (hasta 100 lugares por ejecución) y persiste cada resultado en MongoDB."/>
+          </TextBlock>
+          <TextBlock TextWrapping="Wrap" Foreground="{StaticResource MutedBrush}">
+            <Run Text="Los correos se ejecutan desde"/>
+            <Hyperlink Foreground="{StaticResource GoldHiBrush}" Click="Go_Crm">CRM</Hyperlink>
+            <Run Text="o desde"/>
+            <Hyperlink Foreground="{StaticResource GoldHiBrush}" Click="Go_Social">Redes sociales</Hyperlink><Run Text=", y cada resultado queda registrado en el historial con su estado y fecha. Las ejecuciones automáticas programadas estarán disponibles en una próxima versión."/>
+          </TextBlock>
+        </StackPanel>
+      </Border>
+
+      <Button Content="Actualizar" Click="Retry_Click" HorizontalAlignment="Left" Margin="0,16,0,0"/>
+    </StackPanel>
+  </StackPanel>
+</UserControl>
