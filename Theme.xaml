@@ -97,14 +97,6 @@
   <DropShadowEffect x:Key="FocusGlow" BlurRadius="8" ShadowDepth="0" Opacity="0.45" Color="#E4A53C"/>
 
   <!-- ====================================================================
-       Alias temporales de los brushes anteriores (se retiran al terminar la migración de ventanas)
-       ==================================================================== -->
-  <SolidColorBrush x:Key="NightBrush" Color="{StaticResource BgColor}"/>
-  <SolidColorBrush x:Key="NightRaisedBrush" Color="{StaticResource SurfaceColor}"/>
-  <SolidColorBrush x:Key="LineBrush" Color="{StaticResource BorderColor}"/>
-  <SolidColorBrush x:Key="GoldLightBrush" Color="{StaticResource GoldHiColor}"/>
-
-  <!-- ====================================================================
        Texto
        ==================================================================== -->
   <Style TargetType="TextBlock">

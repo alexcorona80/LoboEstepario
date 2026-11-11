@@ -30,7 +30,7 @@ namespace LoboEstepario
         private readonly List<NavEntry> entries = new List<NavEntry>
         {
             new NavEntry { Key = Routes.Inicio, Icon = "▦", Label = "Inicio", Create = () => new HomePage() },
-            new NavEntry { Key = Routes.Negocios, Icon = "⌕", Label = "Buscar negocios", Create = () => new PlaceholderPage("Buscar negocios") },
+            new NavEntry { Key = Routes.Negocios, Icon = "⌕", Label = "Buscar negocios", Create = () => new NegociosPage() },
             new NavEntry { Key = Routes.Crm, Icon = "✉", Label = "CRM", Create = () => new CrmPage() },
             new NavEntry { Key = Routes.Social, Icon = "◈", Label = "Redes sociales", Create = () => new SocialPage() },
             new NavEntry { Key = Routes.Fuentes, Icon = "◫", Label = "Fuentes", Create = () => new FuentesPage() },

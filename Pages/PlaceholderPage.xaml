@@ -1,9 +1,0 @@
-<UserControl x:Class="LoboEstepario.Pages.PlaceholderPage"
-             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-  <StackPanel>
-    <TextBlock Text="LOBO ESTEPARIO" Style="{StaticResource Eyebrow}"/>
-    <TextBlock x:Name="TitleText" Style="{StaticResource PageTitle}"/>
-    <TextBlock Text="Esta sección se está migrando desde la ventana anterior." Style="{StaticResource PageLead}"/>
-  </StackPanel>
-</UserControl>
