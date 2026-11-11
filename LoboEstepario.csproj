@@ -20,9 +20,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Resource Include="..\Images\LoboEstepario_Logotipo.jpg" Link="Images\LoboEstepario_Logotipo.jpg" />
-    <Resource Include="..\Images\LoboEstepario_Banner.jpg" Link="Images\LoboEstepario_Banner.jpg" />
-    <Resource Include="..\Images\LoboEstepario_Footer.jpg" Link="Images\LoboEstepario_Footer.jpg" />
+    <Resource Include="Images\LoboEstepario_Logotipo.jpg" />
+    <Resource Include="Images\LoboEstepario_Banner.jpg" />
+    <Resource Include="Images\LoboEstepario_Footer.jpg" />
   </ItemGroup>
 
   <ItemGroup>
