@@ -28,6 +28,7 @@ namespace LoboEstepario.Pages
         private bool suppressSelection;
         private bool suppressTemplate;
         private bool suppressCategory;
+        private bool categoriesLoaded;
         private bool historyLoaded;
         private string pendingCompany;
         private string selectedTemplateId = string.Empty;
@@ -68,10 +69,14 @@ namespace LoboEstepario.Pages
             if (!initialized)
             {
                 initialized = true;
-                await LoadCategoriesAsync();
                 await LoadTemplatesAsync();
             }
+            // Las categorías se reintentan en cada visita mientras no se hayan podido cargar
+            // (p. ej. si la API de Render estaba despertando y respondió con un error).
+            if (!categoriesLoaded) await LoadCategoriesAsync();
             await RefreshAsync();
+            // Respaldo: si el endpoint no devolvió categorías, se derivan de los destinatarios ya cargados.
+            if (!categoriesLoaded) SetCategoriesFromRecipients();
         }
 
         // ------------------------------------------------------------------ estado "Despertando servidor"
@@ -167,15 +172,37 @@ namespace LoboEstepario.Pages
 
         private async Task LoadCategoriesAsync()
         {
-            try
+            const int attempts = 3;
+            for (var attempt = 1; attempt <= attempts; attempt++)
             {
-                var list = await GetAsync<List<string>>("api/business/categories");
-                SetCategories(list ?? new List<string>());
+                try
+                {
+                    var list = await GetAsync<List<string>>("api/business/categories");
+                    SetCategories(list ?? new List<string>());
+                    categoriesLoaded = list != null && list.Any(c => !string.IsNullOrWhiteSpace(c));
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine("Categorías (intento " + attempt + "): " + ex.Message);
+                    if (attempt < attempts) await Task.Delay(TimeSpan.FromSeconds(3));
+                }
             }
-            catch (Exception)
-            {
-                SetCategories(new List<string>());
-            }
+            SetCategories(new List<string>());
+        }
+
+        private void SetCategoriesFromRecipients()
+        {
+            var derived = recipients
+                .Select(r => r.Category)
+                .Where(c => !string.IsNullOrWhiteSpace(c))
+                .Select(c => c.Trim())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(c => c)
+                .ToList();
+            if (derived.Count == 0) return;
+            SetCategories(derived);
+            categoriesLoaded = true;
         }
 
         private void SetCategories(List<string> categories)
