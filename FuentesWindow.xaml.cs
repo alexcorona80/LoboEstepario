@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Globalization;
@@ -13,7 +13,7 @@ namespace LoboEstepario
 {
     public partial class FuentesWindow : Window
     {
-        private static readonly HttpClient ApiClient = CreateApiClient();
+        private static readonly HttpClient ApiClient = ApiClientFactory.Client;
         private readonly JavaScriptSerializer json = new JavaScriptSerializer { MaxJsonLength = int.MaxValue };
 
         private static readonly Brush GreenBrush = CreateBrush("#7BC96F");
@@ -26,11 +26,6 @@ namespace LoboEstepario
             Loaded += async (sender, args) => await LoadAsync();
         }
 
-        private static HttpClient CreateApiClient()
-        {
-            var configuredBaseUrl = ConfigurationManager.AppSettings["ApiBaseUrl"] ?? "http://localhost:5080/";
-            return new HttpClient { BaseAddress = new Uri(configuredBaseUrl) };
-        }
 
         private static Brush CreateBrush(string hex)
         {

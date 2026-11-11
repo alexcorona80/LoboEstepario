@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -20,7 +20,7 @@ namespace LoboEstepario
 {
     public partial class SocialWindow : Window
     {
-        private static readonly HttpClient ApiClient = CreateApiClient();
+        private static readonly HttpClient ApiClient = ApiClientFactory.Client;
         private static readonly HttpClient SocialClient = CreateSocialClient();
         private static readonly JavaScriptSerializer SocialJson = new JavaScriptSerializer { MaxJsonLength = int.MaxValue };
 
@@ -40,11 +40,6 @@ namespace LoboEstepario
             Loaded += async (sender, args) => await LoadRecipientsAsync();
         }
 
-        private static HttpClient CreateApiClient()
-        {
-            var configuredBaseUrl = ConfigurationManager.AppSettings["ApiBaseUrl"] ?? "http://localhost:5080/";
-            return new HttpClient { BaseAddress = new Uri(configuredBaseUrl) };
-        }
 
         private static HttpClient CreateSocialClient()
         {

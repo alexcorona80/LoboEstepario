@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Configuration;
@@ -26,7 +26,7 @@ namespace LoboEstepario
     public partial class MainWindow : Window
     {
         private readonly ICollectionView companiesView;
-        private static readonly HttpClient ApiClient = CreateApiClient();
+        private static readonly HttpClient ApiClient = ApiClientFactory.Client;
         private static readonly HttpClient GeocodingClient = CreateGeocodingClient();
         private readonly JavaScriptSerializer json = new JavaScriptSerializer();
         private double selectedLongitude = -103.349;
@@ -58,11 +58,6 @@ namespace LoboEstepario
             return client;
         }
 
-        private static HttpClient CreateApiClient()
-        {
-            var configuredBaseUrl = ConfigurationManager.AppSettings["ApiBaseUrl"] ?? "http://localhost:5080/";
-            return new HttpClient { BaseAddress = new Uri(configuredBaseUrl) };
-        }
 
         private bool MatchesSearch(object item)
         {

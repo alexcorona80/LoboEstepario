@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Configuration;
 using System.Net.Http;
 using System.Text;
@@ -12,7 +12,7 @@ namespace LoboEstepario
 {
     public partial class ConfigWindow : Window
     {
-        private static readonly HttpClient ApiClient = CreateApiClient();
+        private static readonly HttpClient ApiClient = ApiClientFactory.Client;
         private readonly JavaScriptSerializer json = CreateSerializer();
 
         public ConfigWindow()
@@ -21,11 +21,6 @@ namespace LoboEstepario
             Loaded += (sender, args) => LoadSavedSettings();
         }
 
-        private static HttpClient CreateApiClient()
-        {
-            var configuredBaseUrl = ConfigurationManager.AppSettings["ApiBaseUrl"] ?? "http://localhost:5080/";
-            return new HttpClient { BaseAddress = new Uri(configuredBaseUrl) };
-        }
 
         private static JavaScriptSerializer CreateSerializer()
         {

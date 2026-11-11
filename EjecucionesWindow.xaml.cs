@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Configuration;
 using System.Globalization;
 using System.Net.Http;
@@ -10,7 +10,7 @@ namespace LoboEstepario
 {
     public partial class EjecucionesWindow : Window
     {
-        private static readonly HttpClient ApiClient = CreateApiClient();
+        private static readonly HttpClient ApiClient = ApiClientFactory.Client;
         private readonly JavaScriptSerializer json = new JavaScriptSerializer { MaxJsonLength = int.MaxValue };
 
         public EjecucionesWindow()
@@ -19,11 +19,6 @@ namespace LoboEstepario
             Loaded += async (sender, args) => await LoadAsync();
         }
 
-        private static HttpClient CreateApiClient()
-        {
-            var configuredBaseUrl = ConfigurationManager.AppSettings["ApiBaseUrl"] ?? "http://localhost:5080/";
-            return new HttpClient { BaseAddress = new Uri(configuredBaseUrl) };
-        }
 
         private async Task LoadAsync()
         {
