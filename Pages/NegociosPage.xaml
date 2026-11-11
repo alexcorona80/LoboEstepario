@@ -1,0 +1,246 @@
+<UserControl x:Class="LoboEstepario.Pages.NegociosPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:LoboEstepario.Pages"
+             Loaded="OnLoaded" Unloaded="OnUnloaded">
+  <UserControl.Resources>
+    <Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+      <Setter Property="Height" Value="42"/>
+      <Setter Property="Padding" Value="12,0"/>
+    </Style>
+  </UserControl.Resources>
+  <StackPanel>
+    <!-- Cabecera -->
+    <StackPanel Margin="0,0,0,24">
+      <TextBlock Text="PROSPECCIÓN Y BASE DE DATOS" Style="{StaticResource Eyebrow}"/>
+      <TextBlock Text="Buscar negocios" Style="{StaticResource PageTitle}"/>
+      <TextBlock Style="{StaticResource PageLead}"
+                 Text="Explora lugares de Overture Maps por categoría geográfica, guárdalos en MongoDB y consulta las empresas organizadas por industria y ubicación."/>
+    </StackPanel>
+
+    <Grid>
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="*"/>
+        <ColumnDefinition Width="20"/>
+        <ColumnDefinition Width="*"/>
+      </Grid.ColumnDefinitions>
+
+      <!-- Prospección -->
+      <Border Grid.Column="0" Style="{StaticResource Card}" VerticalAlignment="Top">
+        <StackPanel>
+          <DockPanel Margin="0,0,0,14">
+            <TextBlock DockPanel.Dock="Right" Text="búsqueda en el catálogo mundial" Style="{StaticResource Hint}" VerticalAlignment="Center"/>
+            <TextBlock Text="Prospección · Overture" Style="{StaticResource SectionTitle}"/>
+          </DockPanel>
+
+          <TextBlock Text="INDUSTRIA / CATEGORÍA A PROSPECTAR" Style="{StaticResource FieldLabel}"/>
+          <ComboBox x:Name="CategoryBox" DisplayMemberPath="Label" SelectedValuePath="Slug" Margin="0,6,0,14"/>
+
+          <TextBlock Text="EL NEGOCIO CONTIENE (NOMBRE)" Style="{StaticResource FieldLabel}"/>
+          <TextBox x:Name="NameBox" Margin="0,6,0,14" ToolTip="ej. taquería, auto service…"/>
+
+          <TextBlock Text="UBICAR CENTRO (CIUDAD O ZONA)" Style="{StaticResource FieldLabel}"/>
+          <Grid Margin="0,6,0,14">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*"/>
+              <ColumnDefinition Width="8"/>
+              <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <TextBox x:Name="PlaceBox" KeyDown="PlaceBox_KeyDown" ToolTip="ej. Guadalajara, Zapopan…"/>
+            <Button x:Name="GoButton" Grid.Column="2" Content="Ir" Style="{StaticResource SmallButton}" Click="Geocode_Click"/>
+          </Grid>
+
+          <!-- Mapa Leaflet (WebView2): sin elementos WPF superpuestos -->
+          <local:LoboMapControl x:Name="Map" Height="340"/>
+          <TextBlock Style="{StaticResource Hint}" Margin="0,8,0,14"
+                     Text="Haz clic o arrastra el mapa para mover el centro de búsqueda. El marcador dorado es el centro y el círculo muestra la cobertura del radio."/>
+
+          <Grid>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*"/>
+              <ColumnDefinition Width="12"/>
+              <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <StackPanel>
+              <TextBlock Text="LATITUD" Style="{StaticResource FieldLabel}"/>
+              <TextBox x:Name="LatBox" Margin="0,6,0,0" TextChanged="Coord_TextChanged"/>
+            </StackPanel>
+            <StackPanel Grid.Column="2">
+              <TextBlock Text="LONGITUD" Style="{StaticResource FieldLabel}"/>
+              <TextBox x:Name="LngBox" Margin="0,6,0,0" TextChanged="Coord_TextChanged"/>
+            </StackPanel>
+          </Grid>
+
+          <TextBlock Margin="0,14,0,0" Style="{StaticResource FieldLabel}">
+            <Run Text="RADIO: "/><Run x:Name="RadiusLabel" Text="2 km" Foreground="{StaticResource TextBrush}"/>
+          </TextBlock>
+          <Grid Margin="0,6,0,0">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*"/>
+              <ColumnDefinition Width="12"/>
+              <ColumnDefinition Width="110"/>
+            </Grid.ColumnDefinitions>
+            <Slider x:Name="RadiusSlider" Minimum="0" Maximum="5000" SmallChange="50" LargeChange="250"
+                    TickFrequency="50" IsSnapToTickEnabled="True" Value="2000" VerticalAlignment="Center"
+                    ValueChanged="RadiusSlider_ValueChanged"/>
+            <TextBox x:Name="RadiusBox" Grid.Column="2" Text="2000" TextChanged="RadiusBox_TextChanged"/>
+          </Grid>
+
+          <TextBlock x:Name="CenterHint" Style="{StaticResource Hint}" Margin="0,10,0,0" TextWrapping="Wrap"/>
+
+          <WrapPanel Margin="0,16,0,0">
+            <Button x:Name="SearchButton" Content="Buscar en Overture" Style="{StaticResource PrimaryButton}" Click="Search_Click" Margin="0,0,10,0"/>
+            <Button x:Name="ScrapeButton" Content="Guardar en la base" Style="{StaticResource VioletButton}" Click="Scrape_Click"
+                    ToolTip="Consulta Overture y guarda los negocios en MongoDB categorizados"/>
+          </WrapPanel>
+        </StackPanel>
+      </Border>
+
+      <!-- Base guardada -->
+      <Border Grid.Column="2" Style="{StaticResource Card}" VerticalAlignment="Top">
+        <StackPanel>
+          <DockPanel Margin="0,0,0,14">
+            <TextBlock DockPanel.Dock="Right" Text="negocios en MongoDB por categoría" Style="{StaticResource Hint}" VerticalAlignment="Center"/>
+            <TextBlock Text="Base de datos guardada" Style="{StaticResource SectionTitle}"/>
+          </DockPanel>
+
+          <TextBlock Text="FILTRAR POR CATEGORÍA GUARDADA" Style="{StaticResource FieldLabel}"/>
+          <ComboBox x:Name="SavedCategoryBox" DisplayMemberPath="Label" SelectedValuePath="Slug" Margin="0,6,0,12" SelectionChanged="SavedCategory_Changed"/>
+
+          <Button x:Name="LoadButton" Content="Cargar base de datos" Click="Load_Click"/>
+
+          <TextBox x:Name="SearchBox" Margin="0,16,0,0" TextChanged="Filter_Changed"
+                   ToolTip="Buscar por nombre, categoría o ubicación…"/>
+          <TextBlock Style="{StaticResource Hint}" Margin="0,4,0,0" Text="Buscar por nombre, categoría o ubicación…"/>
+
+          <Grid Margin="0,14,0,0">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*"/>
+              <ColumnDefinition Width="12"/>
+              <ColumnDefinition Width="*"/>
+              <ColumnDefinition Width="12"/>
+              <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <StackPanel>
+              <TextBlock Text="PAÍS" Style="{StaticResource FieldLabel}"/>
+              <TextBox x:Name="CountryBox" Margin="0,6,0,0" TextChanged="Filter_Changed"/>
+            </StackPanel>
+            <StackPanel Grid.Column="2">
+              <TextBlock Text="REGIÓN / ESTADO" Style="{StaticResource FieldLabel}"/>
+              <TextBox x:Name="RegionBox" Margin="0,6,0,0" TextChanged="Filter_Changed"/>
+            </StackPanel>
+            <StackPanel Grid.Column="4">
+              <TextBlock Text="CIUDAD" Style="{StaticResource FieldLabel}"/>
+              <TextBox x:Name="CityBox" Margin="0,6,0,0" TextChanged="Filter_Changed"/>
+            </StackPanel>
+          </Grid>
+
+          <DockPanel Margin="0,14,0,0" LastChildFill="False">
+            <CheckBox x:Name="OnlyEmail" Content="Solo con correo" Checked="Filter_Changed" Unchecked="Filter_Changed" VerticalAlignment="Center" Margin="0,0,20,0"/>
+            <CheckBox x:Name="OnlyPhone" Content="Solo con teléfono" Checked="Filter_Changed" Unchecked="Filter_Changed" VerticalAlignment="Center"/>
+            <TextBlock x:Name="CountText" DockPanel.Dock="Right" Style="{StaticResource Hint}" VerticalAlignment="Center" Text="0 resultado(s)"/>
+          </DockPanel>
+        </StackPanel>
+      </Border>
+    </Grid>
+
+    <!-- Resultados -->
+    <DockPanel Margin="0,28,0,0">
+      <Button x:Name="ExportButton" DockPanel.Dock="Right" Content="Exportar CSV" Style="{StaticResource SmallButton}" Click="Export_Click" VerticalAlignment="Center" Margin="14,0,0,0"/>
+      <TextBlock DockPanel.Dock="Right" Style="{StaticResource Hint}" VerticalAlignment="Center">
+        <Run Text="Fuente de la carga actual: "/><Run x:Name="SourceRun" Text="sin datos" FontWeight="SemiBold" Foreground="{StaticResource TextBrush}"/>
+      </TextBlock>
+      <TextBlock Text="Resultados" Style="{StaticResource SectionTitle}"/>
+    </DockPanel>
+
+    <TextBlock x:Name="BusyLine" Style="{StaticResource StatusLine}" Margin="0,10,0,0" Visibility="Collapsed"/>
+
+    <Border x:Name="EmptyPanel" Style="{StaticResource EmptyState}" Margin="0,12,0,0">
+      <StackPanel HorizontalAlignment="Center">
+        <TextBlock Text="◫" FontSize="28" HorizontalAlignment="Center" Foreground="{StaticResource FaintBrush}"/>
+        <TextBlock Text="Sin negocios que mostrar" FontWeight="SemiBold" HorizontalAlignment="Center" Foreground="{StaticResource TextSoftBrush}" Margin="0,6,0,0"/>
+        <TextBlock Text="Busca en Overture, guarda en la base o carga los registros guardados." HorizontalAlignment="Center" Foreground="{StaticResource FaintBrush}" Margin="0,2,0,0"/>
+      </StackPanel>
+    </Border>
+
+    <Border x:Name="TablePanel" Style="{StaticResource TableWrap}" Margin="0,12,0,0" Visibility="Collapsed">
+      <DataGrid x:Name="ResultsGrid" Height="460" MouseDoubleClick="Grid_MouseDoubleClick"
+                ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                ToolTip="Doble clic para abrir el negocio en el CRM">
+        <DataGrid.Columns>
+          <DataGridTemplateColumn Header="NOMBRE" Width="1.8*">
+            <DataGridTemplateColumn.CellTemplate>
+              <DataTemplate>
+                <StackPanel>
+                  <TextBlock Text="{Binding Name}" FontWeight="SemiBold" Foreground="{StaticResource TextBrush}" TextWrapping="Wrap"/>
+                  <WrapPanel Margin="0,4,0,0">
+                    <Border Style="{StaticResource ChipTeal}" Visibility="{Binding EmailChipVisibility}" Margin="0,0,6,0"><TextBlock Text="✉ correo"/></Border>
+                    <Border Style="{StaticResource ChipGold}" Visibility="{Binding PhoneChipVisibility}"><TextBlock Text="☏ teléfono"/></Border>
+                  </WrapPanel>
+                </StackPanel>
+              </DataTemplate>
+            </DataGridTemplateColumn.CellTemplate>
+          </DataGridTemplateColumn>
+          <DataGridTemplateColumn Header="CATEGORÍA" Width="1.2*">
+            <DataGridTemplateColumn.CellTemplate>
+              <DataTemplate>
+                <WrapPanel>
+                  <Border Style="{StaticResource Chip}" Margin="0,0,4,2"><TextBlock Text="{Binding Industry}"/></Border>
+                  <Border Style="{StaticResource ChipViolet}" Visibility="{Binding TagVisibility}" Margin="0,0,0,2"><TextBlock Text="{Binding CategoryTag}"/></Border>
+                </WrapPanel>
+              </DataTemplate>
+            </DataGridTemplateColumn.CellTemplate>
+          </DataGridTemplateColumn>
+          <DataGridTextColumn Header="UBICACIÓN" Width="1.2*" Binding="{Binding Location}">
+            <DataGridTextColumn.ElementStyle>
+              <Style TargetType="TextBlock"><Setter Property="TextWrapping" Value="Wrap"/></Style>
+            </DataGridTextColumn.ElementStyle>
+          </DataGridTextColumn>
+          <DataGridTemplateColumn Header="CONTACTO" Width="2.2*">
+            <DataGridTemplateColumn.CellTemplate>
+              <DataTemplate>
+                <StackPanel>
+                  <ItemsControl ItemsSource="{Binding Emails}">
+                    <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate><Border Style="{StaticResource ChipTeal}" Margin="0,0,4,2"><TextBlock Text="{Binding}" ToolTip="{Binding}" TextTrimming="CharacterEllipsis" FontFamily="{StaticResource MonoFont}"/></Border></DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                  <ItemsControl ItemsSource="{Binding Phones}">
+                    <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate><Border Style="{StaticResource Chip}" Margin="0,0,4,2"><TextBlock Text="{Binding}" ToolTip="{Binding}" TextTrimming="CharacterEllipsis" FontFamily="{StaticResource MonoFont}"/></Border></DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                  <Border Style="{StaticResource Chip}" Visibility="{Binding FallbackVisibility}"><TextBlock Text="{Binding Contact}"/></Border>
+                </StackPanel>
+              </DataTemplate>
+            </DataGridTemplateColumn.CellTemplate>
+          </DataGridTemplateColumn>
+          <DataGridTemplateColumn Header="HISTORIAL DE ENVÍO" Width="1.7*">
+            <DataGridTemplateColumn.CellTemplate>
+              <DataTemplate>
+                <Grid>
+                  <Border Style="{StaticResource ChipGold}" Visibility="{Binding SentVisibility}" ToolTip="{Binding SentTooltip}"><TextBlock Text="{Binding History}"/></Border>
+                  <Border Style="{StaticResource ChipGreen}" Visibility="{Binding UnsentVisibility}"><TextBlock Text="Sin contactar"/></Border>
+                </Grid>
+              </DataTemplate>
+            </DataGridTemplateColumn.CellTemplate>
+          </DataGridTemplateColumn>
+          <DataGridTemplateColumn Header="ORIGEN" Width="1.2*">
+            <DataGridTemplateColumn.CellTemplate>
+              <DataTemplate>
+                <Grid>
+                  <Border Style="{StaticResource ChipViolet}" Visibility="{Binding DbVisibility}"><TextBlock Text="{Binding Source}"/></Border>
+                  <Border Style="{StaticResource ChipGold}" Visibility="{Binding OvertureVisibility}"><TextBlock Text="{Binding Source}"/></Border>
+                </Grid>
+              </DataTemplate>
+            </DataGridTemplateColumn.CellTemplate>
+          </DataGridTemplateColumn>
+        </DataGrid.Columns>
+      </DataGrid>
+    </Border>
+
+    <TextBlock x:Name="StatusText" Style="{StaticResource StatusLine}" Margin="0,24,0,0" TextWrapping="Wrap"/>
+  </StackPanel>
+</UserControl>

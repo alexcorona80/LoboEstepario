@@ -1,0 +1,15 @@
+html, body { margin: 0; height: 100%; background: #101418; overflow: hidden; }
+.lobo-map { position: absolute; inset: 0; background: #101418; }
+.lobo-map.leaflet-container { font-family: "Segoe UI", sans-serif; }
+
+/* Mismo estilo oscuro que la web: filtro CSS sobre las capas del mapa */
+.lobo-map .leaflet-tile-pane,
+.lobo-map .leaflet-overlay-pane,
+.lobo-map .leaflet-marker-pane,
+.lobo-map .leaflet-shadow-pane,
+.lobo-map .leaflet-popup-pane {
+  filter: invert(1) hue-rotate(180deg) contrast(0.9) brightness(0.9);
+}
+.lobo-map .leaflet-control-zoom a { background: #151b22; color: #c9c4b8; border-color: #2a3138; }
+.lobo-map .leaflet-control-attribution { background: rgba(16, 20, 24, 0.8); color: #8b9097; }
+.lobo-map .leaflet-control-attribution a { color: #e2a63d; }
