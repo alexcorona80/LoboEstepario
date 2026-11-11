@@ -1,5 +1,4 @@
-using System;
-using System.Configuration;
+﻿using System;
 using System.Net;
 using System.Net.Http;
 using System.Threading;
@@ -37,7 +36,7 @@ namespace LoboEstepario
         {
             // Sobreescritura para desarrollo local, p. ej. http://localhost:5080/
             var value = Environment.GetEnvironmentVariable("LOBO_API_URL");
-            if (string.IsNullOrWhiteSpace(value)) value = ConfigurationManager.AppSettings["ApiBaseUrl"];
+            if (string.IsNullOrWhiteSpace(value)) value = AppConfig.Get("ApiBaseUrl");
             if (string.IsNullOrWhiteSpace(value)) value = DefaultBaseUrl;
             value = value.Trim();
             return value.EndsWith("/", StringComparison.Ordinal) ? value : value + "/";

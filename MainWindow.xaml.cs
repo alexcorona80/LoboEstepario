@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Configuration;
 using System.ComponentModel;
 using System.Globalization;
 using System.IO;
@@ -9,7 +8,6 @@ using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
-using System.Web.Script.Serialization;
 using System.Windows;
 using Microsoft.Win32;
 using System.Windows.Controls;
@@ -17,9 +15,6 @@ using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
-using GMap.NET;
-using GMap.NET.MapProviders;
-using GMap.NET.WindowsPresentation;
 
 namespace LoboEstepario
 {
@@ -28,12 +23,8 @@ namespace LoboEstepario
         private readonly ICollectionView companiesView;
         private static readonly HttpClient ApiClient = ApiClientFactory.Client;
         private static readonly HttpClient GeocodingClient = CreateGeocodingClient();
-        private readonly JavaScriptSerializer json = new JavaScriptSerializer();
         private double selectedLongitude = -103.349;
         private double selectedLatitude = 20.676;
-        private GMapMarker centerMarker;
-        private GMapPolygon radiusPolygon;
-        private Point mapMouseDownPoint;
         public ObservableCollection<Company> Companies { get; } = new ObservableCollection<Company>();
 
         public MainWindow()
@@ -208,40 +199,10 @@ namespace LoboEstepario
             return value;
         }
 
+        // TEMPORAL: el mapa (GMap.NET) se reemplaza por WebView2 + Leaflet en el commit de la página Negocios.
         private void ConfigureMap()
         {
-            GMapProvider.UserAgent = "LoboEstepario-Desktop/0.1";
-            MapControl.MapProvider = GMapProviders.OpenStreetMap;
-            MapControl.MinZoom = 2;
-            MapControl.MaxZoom = 18;
-            MapControl.Position = new PointLatLng(selectedLatitude, selectedLongitude);
-            MapControl.Zoom = 12;
-            MapControl.CanDragMap = true;
-            MapControl.MouseWheelZoomType = MouseWheelZoomType.MousePositionAndCenter;
-
-            MapControl.MouseDown += MapControl_MouseDown;
-            MapControl.MouseUp += MapControl_MouseUp;
-
             UpdateMapMarker();
-        }
-
-        private void MapControl_MouseDown(object sender, MouseButtonEventArgs e)
-        {
-            mapMouseDownPoint = e.GetPosition(MapControl);
-        }
-
-        private void MapControl_MouseUp(object sender, MouseButtonEventArgs e)
-        {
-            if (e.ChangedButton != MouseButton.Left) return;
-            var point = e.GetPosition(MapControl);
-            var delta = point - mapMouseDownPoint;
-            if (delta.Length > 4) return;
-
-            var position = MapControl.FromLocalToLatLng((int)point.X, (int)point.Y);
-            selectedLatitude = position.Lat;
-            selectedLongitude = position.Lng;
-            UpdateMapMarker();
-            StatusText.Text = "Centro de búsqueda actualizado en el mapa.";
         }
 
         private void Radius_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -251,60 +212,8 @@ namespace LoboEstepario
 
         private void UpdateMapMarker()
         {
-            if (MapControl == null) return;
-
-            var position = new PointLatLng(selectedLatitude, selectedLongitude);
-            if (centerMarker == null)
-            {
-                centerMarker = new GMapMarker(position)
-                {
-                    Shape = new Ellipse
-                    {
-                        Width = 16,
-                        Height = 16,
-                        Fill = new SolidColorBrush(Color.FromRgb(226, 166, 61)),
-                        Stroke = Brushes.White,
-                        StrokeThickness = 1.5,
-                    },
-                    Offset = new Point(-8, -8),
-                };
-                MapControl.Markers.Add(centerMarker);
-            }
-            else
-            {
-                centerMarker.Position = position;
-            }
-
-            var radiusKm = SelectedRadiusKilometers();
-            var circlePoints = BuildCirclePoints(selectedLatitude, selectedLongitude, radiusKm);
-            if (radiusPolygon != null) MapControl.Markers.Remove(radiusPolygon);
-            radiusPolygon = new GMapPolygon(circlePoints);
-            MapControl.Markers.Add(radiusPolygon);
-            MapControl.RegenerateShape(radiusPolygon);
-            var radiusShape = radiusPolygon.Shape as System.Windows.Shapes.Path;
-            if (radiusShape != null)
-            {
-                radiusShape.Fill = new SolidColorBrush(Color.FromArgb(60, 226, 166, 61));
-                radiusShape.Stroke = new SolidColorBrush(Color.FromRgb(226, 166, 61));
-                radiusShape.StrokeThickness = 1.5;
-            }
-
             if (MapCoordinates != null)
-                MapCoordinates.Text = string.Format(CultureInfo.InvariantCulture, "Centro: {0:F4}, {1:F4} · radio {2} km", selectedLatitude, selectedLongitude, radiusKm);
-        }
-
-        private static List<PointLatLng> BuildCirclePoints(double latitude, double longitude, double radiusKm)
-        {
-            var points = new List<PointLatLng>();
-            var latDelta = radiusKm / 111.32;
-            var lonDelta = radiusKm / (111.32 * Math.Cos(latitude * Math.PI / 180));
-            const int steps = 72;
-            for (var i = 0; i <= steps; i++)
-            {
-                var angle = 2 * Math.PI * i / steps;
-                points.Add(new PointLatLng(latitude + latDelta * Math.Sin(angle), longitude + lonDelta * Math.Cos(angle)));
-            }
-            return points;
+                MapCoordinates.Text = string.Format(CultureInfo.InvariantCulture, "Centro: {0:F4}, {1:F4} · radio {2} km", selectedLatitude, selectedLongitude, SelectedRadiusKilometers());
         }
 
         private async void MapSearch_Click(object sender, RoutedEventArgs e)
@@ -319,7 +228,7 @@ namespace LoboEstepario
                 var url = "https://nominatim.openstreetmap.org/search?format=json&limit=1&q=" + Uri.EscapeDataString(query);
                 var response = await GeocodingClient.GetAsync(url);
                 response.EnsureSuccessStatusCode();
-                var raw = json.DeserializeObject(await response.Content.ReadAsStringAsync()) as object[];
+                var raw = Json.DeserializeObject(await response.Content.ReadAsStringAsync()) as object[];
                 if (raw == null || raw.Length == 0)
                 {
                     StatusText.Text = "No se encontraron resultados para \"" + query + "\".";
@@ -338,8 +247,6 @@ namespace LoboEstepario
 
                 selectedLatitude = latitude;
                 selectedLongitude = longitude;
-                MapControl.Position = new PointLatLng(latitude, longitude);
-                MapControl.Zoom = 12;
                 UpdateMapMarker();
                 var displayName = first.ContainsKey("display_name") ? first["display_name"] as string : query;
                 StatusText.Text = "Mapa centrado en " + (displayName ?? query) + ".";
@@ -394,7 +301,7 @@ namespace LoboEstepario
                 StatusText.Text = "Consultando Overture mediante la API local…";
                 var response = await ApiClient.GetAsync(requestUri);
                 response.EnsureSuccessStatusCode();
-                var payload = json.Deserialize<PlacesResponse>(await response.Content.ReadAsStringAsync());
+                var payload = Json.Deserialize<PlacesResponse>(await response.Content.ReadAsStringAsync());
                 Companies.Clear();
                 foreach (var place in payload.Places ?? new PlaceDto[0])
                 {
@@ -422,7 +329,7 @@ namespace LoboEstepario
                 StatusText.Text = "Cargando negocios guardados desde MongoDB…";
                 var response = await ApiClient.GetAsync("api/business?limit=1000");
                 response.EnsureSuccessStatusCode();
-                var places = json.Deserialize<PlaceDto[]>(await response.Content.ReadAsStringAsync()) ?? new PlaceDto[0];
+                var places = Json.Deserialize<PlaceDto[]>(await response.Content.ReadAsStringAsync()) ?? new PlaceDto[0];
                 Companies.Clear();
                 foreach (var place in places) Companies.Add(FromPlace(place, "Base de datos"));
                 companiesView.Refresh();
@@ -460,7 +367,7 @@ namespace LoboEstepario
                 StatusText.Text = "Scrapeando Overture y guardando en MongoDB…";
                 var response = await ApiClient.PostAsync(requestUri, null);
                 response.EnsureSuccessStatusCode();
-                var result = json.Deserialize<ScrapeResultDto>(await response.Content.ReadAsStringAsync());
+                var result = Json.Deserialize<ScrapeResultDto>(await response.Content.ReadAsStringAsync());
                 StatusText.Text = string.Format(CultureInfo.InvariantCulture,
                     "Scrape completo · {0} obtenidos, {1} guardados en la base de datos (Overture {2}).",
                     result.FetchedCount, result.PersistedCount, result.ReleaseVersion ?? "");
@@ -486,7 +393,7 @@ namespace LoboEstepario
 
                 var businessResponse = businessTask.Result;
                 businessResponse.EnsureSuccessStatusCode();
-                var stats = json.Deserialize<BusinessStatsDto>(await businessResponse.Content.ReadAsStringAsync());
+                var stats = Json.Deserialize<BusinessStatsDto>(await businessResponse.Content.ReadAsStringAsync());
                 if (stats != null)
                 {
                     if (StatTotalCompanies != null) StatTotalCompanies.Text = stats.TotalCount.ToString("N0", CultureInfo.InvariantCulture);
@@ -505,7 +412,7 @@ namespace LoboEstepario
 
                 var emailResponse = emailTask.Result;
                 emailResponse.EnsureSuccessStatusCode();
-                var emailStats = json.Deserialize<EmailStatsDto>(await emailResponse.Content.ReadAsStringAsync());
+                var emailStats = Json.Deserialize<EmailStatsDto>(await emailResponse.Content.ReadAsStringAsync());
                 if (emailStats != null)
                 {
                     if (StatEmailsSent != null) StatEmailsSent.Text = emailStats.SentCount.ToString("N0", CultureInfo.InvariantCulture);

@@ -2,14 +2,12 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.Configuration;
 using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
-using System.Web.Script.Serialization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -22,9 +20,6 @@ namespace LoboEstepario
     {
         private static readonly HttpClient ApiClient = ApiClientFactory.Client;
         private static readonly HttpClient SocialClient = CreateSocialClient();
-        private static readonly JavaScriptSerializer SocialJson = new JavaScriptSerializer { MaxJsonLength = int.MaxValue };
-
-        private readonly JavaScriptSerializer json = new JavaScriptSerializer { MaxJsonLength = int.MaxValue, RecursionLimit = 100 };
         private readonly ICollectionView recipientsView;
         private byte[] currentImage;
 
@@ -43,13 +38,13 @@ namespace LoboEstepario
 
         private static HttpClient CreateSocialClient()
         {
-            ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12;
+            
             return new HttpClient { Timeout = TimeSpan.FromMinutes(3) };
         }
 
         private static string GetSetting(string key)
         {
-            var value = ConfigurationManager.AppSettings[key];
+            var value = AppConfig.Get(key);
             return string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim();
         }
 
@@ -60,7 +55,7 @@ namespace LoboEstepario
                 StatusText.Text = "Cargando destinatarios desde la base de datos…";
                 var response = await ApiClient.GetAsync("api/crm/recipients?limit=2000");
                 response.EnsureSuccessStatusCode();
-                var payload = json.Deserialize<BusinessRecipientDto[]>(await response.Content.ReadAsStringAsync()) ?? new BusinessRecipientDto[0];
+                var payload = Json.Deserialize<BusinessRecipientDto[]>(await response.Content.ReadAsStringAsync()) ?? new BusinessRecipientDto[0];
                 Recipients.Clear();
                 foreach (var place in payload)
                 {
@@ -264,7 +259,7 @@ namespace LoboEstepario
                 StatusText.Text = string.Format("Enviando a {0} empresa{1}…", selected.Count, selected.Count == 1 ? string.Empty : "s");
                 var subject = TopicBox.Text.Trim();
                 if (string.IsNullOrWhiteSpace(subject)) subject = "Novedades";
-                var request = json.Serialize(new SendEmailRequestDto
+                var request = Json.Serialize(new SendEmailRequestDto
                 {
                     Smtp = smtp,
                     Recipients = selected.Select(row => new EmailRecipientDto
@@ -278,7 +273,7 @@ namespace LoboEstepario
                 });
                 var response = await ApiClient.PostAsync("api/crm/send", new StringContent(request, Encoding.UTF8, "application/json"));
                 response.EnsureSuccessStatusCode();
-                var result = json.Deserialize<EmailSendResponseDto>(await response.Content.ReadAsStringAsync());
+                var result = Json.Deserialize<EmailSendResponseDto>(await response.Content.ReadAsStringAsync());
                 if (result != null)
                 {
                     StatusText.Text = string.Format("Correo · {0} enviado{1}, {2} fallido{3}.",
@@ -306,7 +301,7 @@ namespace LoboEstepario
         private static SmtpConfigDto CurrentSmtp()
         {
             int port = 587;
-            int.TryParse(ConfigurationManager.AppSettings["CrmSmtpPort"] ?? "587", out port);
+            int.TryParse(AppConfig.Get("CrmSmtpPort") ?? "587", out port);
             return new SmtpConfigDto
             {
                 Host = GetSetting("CrmSmtpHost"),
@@ -314,7 +309,7 @@ namespace LoboEstepario
                 Username = GetSetting("CrmSmtpUser"),
                 Password = GetSetting("CrmSmtpPassword"),
                 FromName = GetSetting("CrmSmtpFromName"),
-                EnableSsl = !string.Equals(ConfigurationManager.AppSettings["CrmSmtpUseSsl"], "False", StringComparison.OrdinalIgnoreCase),
+                EnableSsl = !string.Equals(AppConfig.Get("CrmSmtpUseSsl"), "False", StringComparison.OrdinalIgnoreCase),
             };
         }
 
@@ -381,7 +376,7 @@ namespace LoboEstepario
             var body = await response.Content.ReadAsStringAsync();
             if (!response.IsSuccessStatusCode)
                 throw new InvalidOperationException(label + ": " + (int)response.StatusCode + " " + AiService.Truncate(body));
-            return SocialJson.DeserializeObject(body) as IDictionary<string, object>;
+            return Json.DeserializeObject(body) as IDictionary<string, object>;
         }
 
         private static async Task EnsureGraphSuccessAsync(HttpResponseMessage response, string label)

@@ -2,12 +2,10 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.Configuration;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
-using System.Web.Script.Serialization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -18,7 +16,6 @@ namespace LoboEstepario
     public partial class CrmWindow : Window
     {
         private static readonly HttpClient ApiClient = ApiClientFactory.Client;
-        private readonly JavaScriptSerializer json = CreateSerializer();
         private readonly ICollectionView recipientsView;
         private readonly string preselectedCompanyName;
 
@@ -44,15 +41,10 @@ namespace LoboEstepario
         }
 
 
-        private static JavaScriptSerializer CreateSerializer()
-        {
-            var serializer = new JavaScriptSerializer { MaxJsonLength = int.MaxValue, RecursionLimit = 100 };
-            return serializer;
-        }
 
         private static string GetSetting(string key)
         {
-            var value = ConfigurationManager.AppSettings[key];
+            var value = AppConfig.Get(key);
             return string.IsNullOrWhiteSpace(value) ? string.Empty : value;
         }
 
@@ -98,7 +90,7 @@ namespace LoboEstepario
                 StatusText.Text = "Cargando destinatarios desde la base de datos…";
                 var response = await ApiClient.GetAsync("api/crm/recipients?limit=2000");
                 response.EnsureSuccessStatusCode();
-                var payload = json.Deserialize<BusinessRecipientDto[]>(await response.Content.ReadAsStringAsync()) ?? new BusinessRecipientDto[0];
+                var payload = Json.Deserialize<BusinessRecipientDto[]>(await response.Content.ReadAsStringAsync()) ?? new BusinessRecipientDto[0];
                 Recipients.Clear();
                 foreach (var place in payload)
                 {
@@ -136,7 +128,7 @@ namespace LoboEstepario
             {
                 var response = await ApiClient.GetAsync("api/crm/history?limit=100");
                 response.EnsureSuccessStatusCode();
-                var payload = json.Deserialize<SentEmailDto[]>(await response.Content.ReadAsStringAsync()) ?? new SentEmailDto[0];
+                var payload = Json.Deserialize<SentEmailDto[]>(await response.Content.ReadAsStringAsync()) ?? new SentEmailDto[0];
                 History.Clear();
                 foreach (var item in payload)
                 {
@@ -162,7 +154,7 @@ namespace LoboEstepario
             {
                 var response = await ApiClient.GetAsync("api/crm/stats");
                 response.EnsureSuccessStatusCode();
-                var stats = json.Deserialize<EmailStatsDto>(await response.Content.ReadAsStringAsync());
+                var stats = Json.Deserialize<EmailStatsDto>(await response.Content.ReadAsStringAsync());
                 if (stats == null) return;
                 if (StatsText != null)
                     StatsText.Text = string.Format("Enviados {0} · Fallidos {1} · Empresas con correo {2}",
@@ -197,7 +189,7 @@ namespace LoboEstepario
         private static SmtpConfigDto CurrentSmtp()
         {
             int port = 587;
-            int.TryParse(ConfigurationManager.AppSettings["CrmSmtpPort"] ?? "587", out port);
+            int.TryParse(AppConfig.Get("CrmSmtpPort") ?? "587", out port);
             return new SmtpConfigDto
             {
                 Host = GetSetting("CrmSmtpHost"),
@@ -205,7 +197,7 @@ namespace LoboEstepario
                 Username = GetSetting("CrmSmtpUser"),
                 Password = GetSetting("CrmSmtpPassword"),
                 FromName = GetSetting("CrmSmtpFromName"),
-                EnableSsl = !string.Equals(ConfigurationManager.AppSettings["CrmSmtpUseSsl"], "False", StringComparison.OrdinalIgnoreCase),
+                EnableSsl = !string.Equals(AppConfig.Get("CrmSmtpUseSsl"), "False", StringComparison.OrdinalIgnoreCase),
             };
         }
 
@@ -234,7 +226,7 @@ namespace LoboEstepario
             {
                 SendButton.IsEnabled = false;
                 StatusText.Text = string.Format("Enviando a {0} empresa{1}…", selected.Count, selected.Count == 1 ? string.Empty : "s");
-                var request = json.Serialize(new SendEmailRequestDto
+                var request = Json.Serialize(new SendEmailRequestDto
                 {
                     Smtp = smtp,
                     Recipients = selected.Select(row => new EmailRecipientDto
@@ -248,7 +240,7 @@ namespace LoboEstepario
                 });
                 var response = await ApiClient.PostAsync("api/crm/send", new StringContent(request, Encoding.UTF8, "application/json"));
                 response.EnsureSuccessStatusCode();
-                var result = json.Deserialize<EmailSendResponseDto>(await response.Content.ReadAsStringAsync());
+                var result = Json.Deserialize<EmailSendResponseDto>(await response.Content.ReadAsStringAsync());
                 if (result != null)
                 {
                     StatusText.Text = string.Format("Envío completo · {0} enviado{1}, {2} fallido{3}.",

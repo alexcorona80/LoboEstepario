@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Configuration;
 using System.Globalization;
 using System.Net.Http;
 using System.Threading.Tasks;
-using System.Web.Script.Serialization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -14,7 +12,6 @@ namespace LoboEstepario
     public partial class FuentesWindow : Window
     {
         private static readonly HttpClient ApiClient = ApiClientFactory.Client;
-        private readonly JavaScriptSerializer json = new JavaScriptSerializer { MaxJsonLength = int.MaxValue };
 
         private static readonly Brush GreenBrush = CreateBrush("#7BC96F");
         private static readonly Brush RedBrush = CreateBrush("#E2574C");
@@ -74,7 +71,7 @@ namespace LoboEstepario
             {
                 var response = await ApiClient.GetAsync("api/health/overture");
                 var body = await response.Content.ReadAsStringAsync();
-                var payload = json.DeserializeObject(body) as IDictionary<string, object>;
+                var payload = Json.DeserializeObject(body) as IDictionary<string, object>;
                 var status = payload != null && payload.ContainsKey("status") ? Convert.ToString(payload["status"]) : null;
 
                 if (response.IsSuccessStatusCode && string.Equals(status, "reachable", StringComparison.OrdinalIgnoreCase))
@@ -121,7 +118,7 @@ namespace LoboEstepario
             {
                 var response = await ApiClient.GetAsync("api/business/stats");
                 response.EnsureSuccessStatusCode();
-                var stats = json.Deserialize<BusinessStatsDto>(await response.Content.ReadAsStringAsync());
+                var stats = Json.Deserialize<BusinessStatsDto>(await response.Content.ReadAsStringAsync());
                 if (stats == null)
                 {
                     SetChip(MongoChip, MongoChipText, "conectado", GreenBrush);

@@ -1,12 +1,10 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Configuration;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
-using System.Web.Script.Serialization;
 
 namespace LoboEstepario
 {
@@ -14,7 +12,6 @@ namespace LoboEstepario
     public static class AiService
     {
         private static readonly HttpClient Client = new HttpClient();
-        private static readonly JavaScriptSerializer Json = new JavaScriptSerializer { MaxJsonLength = int.MaxValue };
 
         private static string Provider => GetSetting("AiProvider") ?? "openai";
         private static string BaseUrl => GetSetting("AiBaseUrl");
@@ -24,7 +21,7 @@ namespace LoboEstepario
 
         static AiService()
         {
-            ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12;
+            
             Client.Timeout = TimeSpan.FromMinutes(3);
         }
 
@@ -32,7 +29,7 @@ namespace LoboEstepario
 
         private static string GetSetting(string key)
         {
-            var value = ConfigurationManager.AppSettings[key];
+            var value = AppConfig.Get(key);
             return string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim();
         }
 

@@ -1,9 +1,7 @@
 ﻿using System;
-using System.Configuration;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
-using System.Web.Script.Serialization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -13,7 +11,6 @@ namespace LoboEstepario
     public partial class ConfigWindow : Window
     {
         private static readonly HttpClient ApiClient = ApiClientFactory.Client;
-        private readonly JavaScriptSerializer json = CreateSerializer();
 
         public ConfigWindow()
         {
@@ -22,15 +19,10 @@ namespace LoboEstepario
         }
 
 
-        private static JavaScriptSerializer CreateSerializer()
-        {
-            var serializer = new JavaScriptSerializer { MaxJsonLength = int.MaxValue, RecursionLimit = 100 };
-            return serializer;
-        }
 
         private static string GetSetting(string key)
         {
-            var value = ConfigurationManager.AppSettings[key];
+            var value = AppConfig.Get(key);
             return string.IsNullOrWhiteSpace(value) ? string.Empty : value;
         }
 
@@ -41,7 +33,7 @@ namespace LoboEstepario
             SmtpUserBox.Text = GetSetting("CrmSmtpUser");
             SmtpPasswordBox.Password = GetSetting("CrmSmtpPassword");
             FromNameBox.Text = GetSetting("CrmSmtpFromName");
-            UseSslBox.IsChecked = !string.Equals(ConfigurationManager.AppSettings["CrmSmtpUseSsl"], "False", StringComparison.OrdinalIgnoreCase);
+            UseSslBox.IsChecked = !string.Equals(AppConfig.Get("CrmSmtpUseSsl"), "False", StringComparison.OrdinalIgnoreCase);
             MatchProvider(SmtpHostBox.Text);
 
             FacebookPageIdBox.Text = GetSetting("FacebookPageId");
@@ -121,14 +113,12 @@ namespace LoboEstepario
         {
             try
             {
-                var config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
-                SetSetting(config, "AiProvider", AiProviderTag(AiProviderBox.SelectedIndex));
-                SetSetting(config, "AiBaseUrl", AiBaseUrlBox.Text.Trim());
-                SetSetting(config, "AiModel", AiModelBox.Text.Trim());
-                SetSetting(config, "AiImageModel", AiImageModelBox.Text.Trim());
-                SetSetting(config, "AiApiKey", AiApiKeyBox.Password);
-                config.Save(ConfigurationSaveMode.Modified);
-                ConfigurationManager.RefreshSection("appSettings");
+                AppConfig.Set("AiProvider", AiProviderTag(AiProviderBox.SelectedIndex));
+                AppConfig.Set("AiBaseUrl", AiBaseUrlBox.Text.Trim());
+                AppConfig.Set("AiModel", AiModelBox.Text.Trim());
+                AppConfig.Set("AiImageModel", AiImageModelBox.Text.Trim());
+                AppConfig.Set("AiApiKey", AiApiKeyBox.Password);
+                AppConfig.Save();
                 StatusText.Text = "Configuración del agente de IA guardada.";
             }
             catch (Exception ex)
@@ -173,27 +163,18 @@ namespace LoboEstepario
             }
         }
 
-        private static void SetSetting(System.Configuration.Configuration config, string key, string value)
-        {
-            if (config.AppSettings.Settings[key] == null)
-                config.AppSettings.Settings.Add(key, value);
-            else
-                config.AppSettings.Settings[key].Value = value;
-        }
 
         private void SaveAccount_Click(object sender, RoutedEventArgs e)
         {
             try
             {
-                var config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
-                SetSetting(config, "CrmSmtpHost", SmtpHostBox.Text.Trim());
-                SetSetting(config, "CrmSmtpPort", string.IsNullOrWhiteSpace(SmtpPortBox.Text) ? "587" : SmtpPortBox.Text.Trim());
-                SetSetting(config, "CrmSmtpUser", SmtpUserBox.Text.Trim());
-                SetSetting(config, "CrmSmtpPassword", SmtpPasswordBox.Password);
-                SetSetting(config, "CrmSmtpFromName", FromNameBox.Text.Trim());
-                SetSetting(config, "CrmSmtpUseSsl", (UseSslBox.IsChecked ?? true).ToString());
-                config.Save(ConfigurationSaveMode.Modified);
-                ConfigurationManager.RefreshSection("appSettings");
+                AppConfig.Set("CrmSmtpHost", SmtpHostBox.Text.Trim());
+                AppConfig.Set("CrmSmtpPort", string.IsNullOrWhiteSpace(SmtpPortBox.Text) ? "587" : SmtpPortBox.Text.Trim());
+                AppConfig.Set("CrmSmtpUser", SmtpUserBox.Text.Trim());
+                AppConfig.Set("CrmSmtpPassword", SmtpPasswordBox.Password);
+                AppConfig.Set("CrmSmtpFromName", FromNameBox.Text.Trim());
+                AppConfig.Set("CrmSmtpUseSsl", (UseSslBox.IsChecked ?? true).ToString());
+                AppConfig.Save();
                 StatusText.Text = "Cuenta de correo guardada.";
             }
             catch (Exception ex)
@@ -206,13 +187,11 @@ namespace LoboEstepario
         {
             try
             {
-                var config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
-                SetSetting(config, "FacebookPageId", FacebookPageIdBox.Text.Trim());
-                SetSetting(config, "FacebookAccessToken", FacebookTokenBox.Text.Trim());
-                SetSetting(config, "FacebookAppId", FacebookAppIdBox.Text.Trim());
-                SetSetting(config, "FacebookAppSecret", FacebookAppSecretBox.Password);
-                config.Save(ConfigurationSaveMode.Modified);
-                ConfigurationManager.RefreshSection("appSettings");
+                AppConfig.Set("FacebookPageId", FacebookPageIdBox.Text.Trim());
+                AppConfig.Set("FacebookAccessToken", FacebookTokenBox.Text.Trim());
+                AppConfig.Set("FacebookAppId", FacebookAppIdBox.Text.Trim());
+                AppConfig.Set("FacebookAppSecret", FacebookAppSecretBox.Password);
+                AppConfig.Save();
                 StatusText.Text = "Configuración de Facebook guardada.";
             }
             catch (Exception ex)
@@ -225,13 +204,11 @@ namespace LoboEstepario
         {
             try
             {
-                var config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
-                SetSetting(config, "InstagramBusinessAccountId", InstagramAccountIdBox.Text.Trim());
-                SetSetting(config, "InstagramAccessToken", InstagramTokenBox.Text.Trim());
-                SetSetting(config, "InstagramAppId", InstagramAppIdBox.Text.Trim());
-                SetSetting(config, "InstagramAppSecret", InstagramAppSecretBox.Password);
-                config.Save(ConfigurationSaveMode.Modified);
-                ConfigurationManager.RefreshSection("appSettings");
+                AppConfig.Set("InstagramBusinessAccountId", InstagramAccountIdBox.Text.Trim());
+                AppConfig.Set("InstagramAccessToken", InstagramTokenBox.Text.Trim());
+                AppConfig.Set("InstagramAppId", InstagramAppIdBox.Text.Trim());
+                AppConfig.Set("InstagramAppSecret", InstagramAppSecretBox.Password);
+                AppConfig.Save();
                 StatusText.Text = "Configuración de Instagram guardada.";
             }
             catch (Exception ex)
@@ -243,7 +220,7 @@ namespace LoboEstepario
         private static SmtpConfigDto CurrentSmtp()
         {
             int port = 587;
-            int.TryParse(ConfigurationManager.AppSettings["CrmSmtpPort"] ?? "587", out port);
+            int.TryParse(AppConfig.Get("CrmSmtpPort") ?? "587", out port);
             return new SmtpConfigDto
             {
                 Host = GetSetting("CrmSmtpHost"),
@@ -251,7 +228,7 @@ namespace LoboEstepario
                 Username = GetSetting("CrmSmtpUser"),
                 Password = GetSetting("CrmSmtpPassword"),
                 FromName = GetSetting("CrmSmtpFromName"),
-                EnableSsl = !string.Equals(ConfigurationManager.AppSettings["CrmSmtpUseSsl"], "False", StringComparison.OrdinalIgnoreCase),
+                EnableSsl = !string.Equals(AppConfig.Get("CrmSmtpUseSsl"), "False", StringComparison.OrdinalIgnoreCase),
             };
         }
 
@@ -268,10 +245,10 @@ namespace LoboEstepario
             {
                 TestButton.IsEnabled = false;
                 StatusText.Text = "Enviando correo de prueba…";
-                var request = json.Serialize(new TestEmailRequestDto { Smtp = smtp, ToEmail = smtp.Username });
+                var request = Json.Serialize(new TestEmailRequestDto { Smtp = smtp, ToEmail = smtp.Username });
                 var response = await ApiClient.PostAsync("api/crm/test", new StringContent(request, Encoding.UTF8, "application/json"));
                 response.EnsureSuccessStatusCode();
-                var result = json.Deserialize<EmailTestResponseDto>(await response.Content.ReadAsStringAsync());
+                var result = Json.Deserialize<EmailTestResponseDto>(await response.Content.ReadAsStringAsync());
                 if (result != null && result.Success)
                     StatusText.Text = "Correo de prueba enviado a " + smtp.Username + ". Revisa la bandeja.";
                 else

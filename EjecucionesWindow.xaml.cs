@@ -1,9 +1,7 @@
 ﻿using System;
-using System.Configuration;
 using System.Globalization;
 using System.Net.Http;
 using System.Threading.Tasks;
-using System.Web.Script.Serialization;
 using System.Windows;
 
 namespace LoboEstepario
@@ -11,7 +9,6 @@ namespace LoboEstepario
     public partial class EjecucionesWindow : Window
     {
         private static readonly HttpClient ApiClient = ApiClientFactory.Client;
-        private readonly JavaScriptSerializer json = new JavaScriptSerializer { MaxJsonLength = int.MaxValue };
 
         public EjecucionesWindow()
         {
@@ -33,11 +30,11 @@ namespace LoboEstepario
 
                 var businessResponse = businessTask.Result;
                 businessResponse.EnsureSuccessStatusCode();
-                var business = json.Deserialize<BusinessStatsDto>(await businessResponse.Content.ReadAsStringAsync());
+                var business = Json.Deserialize<BusinessStatsDto>(await businessResponse.Content.ReadAsStringAsync());
 
                 var emailResponse = emailTask.Result;
                 emailResponse.EnsureSuccessStatusCode();
-                var email = json.Deserialize<EmailStatsDto>(await emailResponse.Content.ReadAsStringAsync());
+                var email = Json.Deserialize<EmailStatsDto>(await emailResponse.Content.ReadAsStringAsync());
 
                 if (business != null)
                 {
