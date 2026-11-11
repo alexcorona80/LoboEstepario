@@ -33,7 +33,6 @@ namespace LoboEstepario
             new NavEntry { Key = Routes.Negocios, Icon = "⌕", Label = "Buscar negocios", Create = () => new NegociosPage() },
             new NavEntry { Key = Routes.Crm, Icon = "✉", Label = "CRM", Create = () => new CrmPage() },
             new NavEntry { Key = Routes.Social, Icon = "◈", Label = "Redes sociales", Create = () => new SocialPage() },
-            new NavEntry { Key = Routes.Fuentes, Icon = "◫", Label = "Fuentes", Create = () => new FuentesPage() },
             new NavEntry { Key = Routes.Ejecuciones, Icon = "↻", Label = "Ejecuciones", Create = () => new EjecucionesPage() },
             new NavEntry { Key = Routes.Configuracion, Icon = "⚙", Label = "Configuración", Create = () => new ConfigPage() },
         };

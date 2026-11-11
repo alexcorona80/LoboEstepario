@@ -64,8 +64,7 @@
             <TextBlock Style="{StaticResource Hint}" Margin="0,12,0,0">
               <Run Text="La prospección consulta lugares de Overture y los persiste en MongoDB (colección"/>
               <Run Text="BusinessList" FontFamily="{StaticResource MonoFont}"/>
-              <Run Text="). Ver detalles en el módulo"/>
-              <Hyperlink Foreground="{StaticResource GoldHiBrush}" Click="Go_Fuentes">Fuentes</Hyperlink><Run Text="."/>
+              <Run Text=")."/>
             </TextBlock>
           </StackPanel>
         </Border>

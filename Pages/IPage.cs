@@ -9,7 +9,6 @@ namespace LoboEstepario.Pages
         public const string Negocios = "negocios";
         public const string Crm = "crm";
         public const string Social = "social";
-        public const string Fuentes = "fuentes";
         public const string Ejecuciones = "ejecuciones";
         public const string Configuracion = "configuracion";
     }

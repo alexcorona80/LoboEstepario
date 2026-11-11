@@ -129,6 +129,5 @@ namespace LoboEstepario.Pages
         private void Go_Crm(object sender, RoutedEventArgs e) { MainWindow.Current.Navigate(Routes.Crm); }
         private void Go_Social(object sender, RoutedEventArgs e) { MainWindow.Current.Navigate(Routes.Social); }
         private void Go_Config(object sender, RoutedEventArgs e) { MainWindow.Current.Navigate(Routes.Configuracion); }
-        private void Go_Fuentes(object sender, RoutedEventArgs e) { MainWindow.Current.Navigate(Routes.Fuentes); }
     }
 }
