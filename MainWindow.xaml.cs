@@ -59,6 +59,7 @@ namespace LoboEstepario
         public MainWindow()
         {
             InitializeComponent();
+            FitToWorkArea();
             Current = this;
             BuildNavigation();
             Loaded += async (sender, args) =>
@@ -67,6 +68,22 @@ namespace LoboEstepario
                 await NavigateAsync(string.IsNullOrWhiteSpace(start) ? Routes.Inicio : start.Trim().ToLowerInvariant());
                 await StartApiStatusAsync();
             };
+        }
+
+        /// <summary>
+        /// Evita que la ventana sea más grande que el área útil de la pantalla (monitores de 768 px de alto
+        /// o con escalado alto): si no, la barra de título queda fuera de pantalla y no se puede mover ni cerrar.
+        /// </summary>
+        private void FitToWorkArea()
+        {
+            var area = SystemParameters.WorkArea; // en unidades independientes del dispositivo
+            MinWidth = Math.Min(MinWidth, area.Width);
+            MinHeight = Math.Min(MinHeight, area.Height);
+            Width = Math.Min(Width, area.Width);
+            Height = Math.Min(Height, area.Height);
+            // Con pantallas pequeñas abre maximizada, que es lo más cómodo.
+            if (area.Width < 1200 || area.Height < 800)
+                WindowState = WindowState.Maximized;
         }
 
         private void BuildNavigation()
