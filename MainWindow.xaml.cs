@@ -29,13 +29,13 @@ namespace LoboEstepario
         // Para registrar una página nueva basta con cambiar su fábrica aquí.
         private readonly List<NavEntry> entries = new List<NavEntry>
         {
-            new NavEntry { Key = Routes.Inicio, Icon = "▦", Label = "Inicio", Create = () => new PlaceholderPage("Inicio") },
+            new NavEntry { Key = Routes.Inicio, Icon = "▦", Label = "Inicio", Create = () => new HomePage() },
             new NavEntry { Key = Routes.Negocios, Icon = "⌕", Label = "Buscar negocios", Create = () => new PlaceholderPage("Buscar negocios") },
-            new NavEntry { Key = Routes.Crm, Icon = "✉", Label = "CRM", Create = () => new PlaceholderPage("CRM") },
-            new NavEntry { Key = Routes.Social, Icon = "◈", Label = "Redes sociales", Create = () => new PlaceholderPage("Redes sociales") },
-            new NavEntry { Key = Routes.Fuentes, Icon = "◫", Label = "Fuentes", Create = () => new PlaceholderPage("Fuentes") },
-            new NavEntry { Key = Routes.Ejecuciones, Icon = "↻", Label = "Ejecuciones", Create = () => new PlaceholderPage("Ejecuciones") },
-            new NavEntry { Key = Routes.Configuracion, Icon = "⚙", Label = "Configuración", Create = () => new PlaceholderPage("Configuración") },
+            new NavEntry { Key = Routes.Crm, Icon = "✉", Label = "CRM", Create = () => new CrmPage() },
+            new NavEntry { Key = Routes.Social, Icon = "◈", Label = "Redes sociales", Create = () => new SocialPage() },
+            new NavEntry { Key = Routes.Fuentes, Icon = "◫", Label = "Fuentes", Create = () => new FuentesPage() },
+            new NavEntry { Key = Routes.Ejecuciones, Icon = "↻", Label = "Ejecuciones", Create = () => new EjecucionesPage() },
+            new NavEntry { Key = Routes.Configuracion, Icon = "⚙", Label = "Configuración", Create = () => new ConfigPage() },
         };
 
         private readonly Dictionary<string, RadioButton> navButtons = new Dictionary<string, RadioButton>();

@@ -6,12 +6,8 @@
       <Setter Property="Margin" Value="0,0,16,12"/>
     </Style>
     <Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
-      <!-- El ScrollViewer interno del template ya aplica el Padding: se reduce para igualar la altura de la web -->
-      <Setter Property="Padding" Value="6,5"/>
     </Style>
     <Style TargetType="PasswordBox" BasedOn="{StaticResource {x:Type PasswordBox}}">
-      <!-- El ScrollViewer interno del template ya aplica el Padding: se reduce para igualar la altura de la web -->
-      <Setter Property="Padding" Value="6,5"/>
     </Style>
   </UserControl.Resources>
   <StackPanel>
