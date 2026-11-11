@@ -313,74 +313,12 @@ namespace LoboEstepario
         public string Status { get; set; }
     }
 
-    public sealed class BusinessRecipientDto
-    {
-        public string Id { get; set; }
-        public string Name { get; set; }
-        public string[] Emails { get; set; }
-        public string Locality { get; set; }
-        public string Region { get; set; }
-        public string Country { get; set; }
-    }
 
-    public sealed class SmtpConfigDto
-    {
-        public string Host { get; set; }
-        public int Port { get; set; }
-        public string Username { get; set; }
-        public string Password { get; set; }
-        public string FromName { get; set; }
-        public bool EnableSsl { get; set; }
-    }
 
-    public sealed class TestEmailRequestDto
-    {
-        public SmtpConfigDto Smtp { get; set; }
-        public string ToEmail { get; set; }
-    }
 
-    public sealed class EmailRecipientDto
-    {
-        public string BusinessId { get; set; }
-        public string BusinessName { get; set; }
-        public string ToEmail { get; set; }
-    }
 
-    public sealed class SendEmailRequestDto
-    {
-        public SmtpConfigDto Smtp { get; set; }
-        public EmailRecipientDto[] Recipients { get; set; }
-        public string Subject { get; set; }
-        public string Body { get; set; }
-    }
 
-    public sealed class EmailTestResponseDto
-    {
-        public bool Success { get; set; }
-        public string Error { get; set; }
-    }
 
-    public sealed class EmailSendResponseDto
-    {
-        public int SentCount { get; set; }
-        public int FailedCount { get; set; }
-    }
 
-    public sealed class SentEmailDto
-    {
-        public string BusinessName { get; set; }
-        public string ToEmail { get; set; }
-        public string Subject { get; set; }
-        public string SentAtUtc { get; set; }
-        public int Status { get; set; }
-        public string Error { get; set; }
-    }
 
-    public sealed class EmailStatsDto
-    {
-        public long SentCount { get; set; }
-        public long FailedCount { get; set; }
-        public long BusinessesWithEmailCount { get; set; }
-        public string LastSentAtUtc { get; set; }
-    }
 }

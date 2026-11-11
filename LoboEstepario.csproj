@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
@@ -17,6 +17,12 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="10.0.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="..\Images\LoboEstepario_Logotipo.jpg" Link="Images\LoboEstepario_Logotipo.jpg" />
+    <Resource Include="..\Images\LoboEstepario_Banner.jpg" Link="Images\LoboEstepario_Banner.jpg" />
+    <Resource Include="..\Images\LoboEstepario_Footer.jpg" Link="Images\LoboEstepario_Footer.jpg" />
   </ItemGroup>
 
   <ItemGroup>

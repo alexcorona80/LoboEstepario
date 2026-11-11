@@ -1,557 +1,162 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.ComponentModel;
-using System.Globalization;
-using System.IO;
-using System.Linq;
-using System.Net.Http;
-using System.Text;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows;
-using Microsoft.Win32;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Input;
+using System.Windows.Interop;
 using System.Windows.Media;
-using System.Windows.Shapes;
+using System.Windows.Threading;
+using LoboEstepario.Pages;
 
 namespace LoboEstepario
 {
+    /// <summary>
+    /// Ventana única: sidebar de 264 px + topbar de 64 px + una página (UserControl) por sección.
+    /// Los iconos y el orden de navegación son los de LoboEsteparioWeb/Components/Layout/NavMenu.razor.
+    /// </summary>
     public partial class MainWindow : Window
     {
-        private readonly ICollectionView companiesView;
-        private static readonly HttpClient ApiClient = ApiClientFactory.Client;
-        private static readonly HttpClient GeocodingClient = CreateGeocodingClient();
-        private double selectedLongitude = -103.349;
-        private double selectedLatitude = 20.676;
-        public ObservableCollection<Company> Companies { get; } = new ObservableCollection<Company>();
+        private sealed class NavEntry
+        {
+            public string Key;
+            public string Icon;
+            public string Label;
+            public Func<UserControl> Create;
+            public UserControl Page;
+        }
+
+        // Para registrar una página nueva basta con cambiar su fábrica aquí.
+        private readonly List<NavEntry> entries = new List<NavEntry>
+        {
+            new NavEntry { Key = Routes.Inicio, Icon = "▦", Label = "Inicio", Create = () => new PlaceholderPage("Inicio") },
+            new NavEntry { Key = Routes.Negocios, Icon = "⌕", Label = "Buscar negocios", Create = () => new PlaceholderPage("Buscar negocios") },
+            new NavEntry { Key = Routes.Crm, Icon = "✉", Label = "CRM", Create = () => new PlaceholderPage("CRM") },
+            new NavEntry { Key = Routes.Social, Icon = "◈", Label = "Redes sociales", Create = () => new PlaceholderPage("Redes sociales") },
+            new NavEntry { Key = Routes.Fuentes, Icon = "◫", Label = "Fuentes", Create = () => new PlaceholderPage("Fuentes") },
+            new NavEntry { Key = Routes.Ejecuciones, Icon = "↻", Label = "Ejecuciones", Create = () => new PlaceholderPage("Ejecuciones") },
+            new NavEntry { Key = Routes.Configuracion, Icon = "⚙", Label = "Configuración", Create = () => new PlaceholderPage("Configuración") },
+        };
+
+        private readonly Dictionary<string, RadioButton> navButtons = new Dictionary<string, RadioButton>();
+        private readonly DispatcherTimer pollTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(15) };
+        private bool navigating;
+        private bool apiOk;
+
+        /// <summary>Ventana principal en ejecución; las páginas la usan para navegar entre secciones.</summary>
+        public static MainWindow Current { get; private set; }
+
+        [DllImport("dwmapi.dll")]
+        private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attribute, ref int value, int size);
+
+        protected override void OnSourceInitialized(EventArgs e)
+        {
+            base.OnSourceInitialized(e);
+            // Barra de título oscura (Windows 10 20H1+ / 11); si no está soportado se ignora.
+            var dark = 1;
+            DwmSetWindowAttribute(new WindowInteropHelper(this).Handle, 20, ref dark, sizeof(int));
+        }
 
         public MainWindow()
         {
             InitializeComponent();
-            DataContext = this;
-            companiesView = CollectionViewSource.GetDefaultView(Companies);
-            companiesView.Filter = MatchesSearch;
-            UpdateResultCount();
-            Loaded += (sender, args) =>
+            Current = this;
+            BuildNavigation();
+            Loaded += async (sender, args) =>
             {
-                ConfigureMap();
-                LoadDashboardStats();
-                LoadSavedBusinesses_Click(sender, args);
+                await NavigateAsync(Routes.Inicio);
+                await StartApiStatusAsync();
             };
         }
 
-        private static HttpClient CreateGeocodingClient()
+        private void BuildNavigation()
         {
-            var client = new HttpClient();
-            client.DefaultRequestHeaders.UserAgent.ParseAdd("LoboEstepario-Desktop/0.1");
-            return client;
-        }
-
-
-        private bool MatchesSearch(object item)
-        {
-            var company = item as Company;
-            var query = SearchBox == null ? string.Empty : SearchBox.Text.Trim();
-            var country = CountryBox == null ? string.Empty : CountryBox.Text.Trim();
-            var region = RegionBox == null ? string.Empty : RegionBox.Text.Trim();
-            var city = CityBox == null ? string.Empty : CityBox.Text.Trim();
-            var onlyEmail = OnlyEmailBox != null && (OnlyEmailBox.IsChecked ?? false);
-            var onlyPhone = OnlyPhoneBox != null && (OnlyPhoneBox.IsChecked ?? false);
-            return company != null && (string.IsNullOrWhiteSpace(query)
-                || company.Name.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0
-                || company.Industry.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0
-                || company.Location.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0)
-                && Contains(company.Country, country)
-                && Contains(company.Region, region)
-                && Contains(company.City, city)
-                && (!onlyEmail || company.HasEmail)
-                && (!onlyPhone || company.HasPhone);
-        }
-
-        private static bool Contains(string value, string query) => string.IsNullOrWhiteSpace(query)
-            || (!string.IsNullOrWhiteSpace(value) && value.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0);
-
-        private void SearchBox_TextChanged(object sender, TextChangedEventArgs e)
-        {
-            if (companiesView == null) return;
-            companiesView.Refresh();
-            UpdateResultCount();
-        }
-
-        private void LocationFilter_TextChanged(object sender, TextChangedEventArgs e)
-        {
-            if (companiesView == null) return;
-            companiesView.Refresh();
-            UpdateResultCount();
-        }
-
-        private void ContactFilter_Changed(object sender, RoutedEventArgs e)
-        {
-            if (companiesView == null) return;
-            companiesView.Refresh();
-            UpdateResultCount();
-        }
-
-        private void UpdateResultCount()
-        {
-            if (ResultCount != null) ResultCount.Text = string.Format("{0} resultados", companiesView == null ? Companies.Count : companiesView.Cast<object>().Count());
-        }
-
-        private void Navigation_Click(object sender, RoutedEventArgs e)
-        {
-            var button = sender as Button;
-            if (button != null && string.Equals(button.Tag as string, "CRM", StringComparison.OrdinalIgnoreCase))
+            foreach (var entry in entries)
             {
-                new CrmWindow { Owner = this }.Show();
-                return;
+                var content = new StackPanel { Orientation = Orientation.Horizontal };
+                content.Children.Add(new TextBlock { Text = entry.Icon, Width = 20, TextAlignment = TextAlignment.Center, FontSize = 16, Opacity = 0.9 });
+                content.Children.Add(new TextBlock { Text = entry.Label, Margin = new Thickness(12, 0, 0, 0) });
+                var button = new RadioButton
+                {
+                    GroupName = "nav",
+                    Style = (Style)FindResource("NavItem"),
+                    Content = content,
+                    Tag = entry.Key,
+                };
+                var key = entry.Key;
+                button.Checked += async (sender, args) => { if (!navigating) await NavigateAsync(key); };
+                navButtons[entry.Key] = button;
+                NavPanel.Children.Add(button);
             }
-            if (button != null && string.Equals(button.Tag as string, "Redes sociales", StringComparison.OrdinalIgnoreCase))
-            {
-                new SocialWindow { Owner = this }.Show();
-                return;
-            }
-            if (button != null && string.Equals(button.Tag as string, "Configuración", StringComparison.OrdinalIgnoreCase))
-            {
-                new ConfigWindow { Owner = this }.Show();
-                return;
-            }
-            if (button != null && string.Equals(button.Tag as string, "Fuentes", StringComparison.OrdinalIgnoreCase))
-            {
-                new FuentesWindow { Owner = this }.Show();
-                return;
-            }
-            if (button != null && string.Equals(button.Tag as string, "Ejecuciones", StringComparison.OrdinalIgnoreCase))
-            {
-                new EjecucionesWindow { Owner = this }.Show();
-                return;
-            }
-            if (button != null && string.Equals(button.Tag as string, "Inicio", StringComparison.OrdinalIgnoreCase))
-            {
-                StatusText.Text = "Estás en el panel de inicio.";
-                return;
-            }
-            if (button != null && string.Equals(button.Tag as string, "Buscar negocios", StringComparison.OrdinalIgnoreCase))
-            {
-                StatusText.Text = "Configura la búsqueda y delimita el radio sobre el mapa para prospectar.";
-                return;
-            }
-            StatusText.Text = string.Format("La sección {0} estará disponible al conectar los datos.", button == null ? "seleccionada" : button.Tag);
         }
 
-        private void CompaniesGrid_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        /// <summary>Muestra la página de la sección. <paramref name="parameter"/> se entrega a <see cref="IPage"/>.</summary>
+        public async Task NavigateAsync(string key, object parameter = null)
         {
-            var company = CompaniesGrid.SelectedItem as Company;
-            if (company == null) return;
-            new CrmWindow(company.Name) { Owner = this }.Show();
-        }
+            var entry = entries.Find(e => e.Key == key);
+            if (entry == null) return;
 
-        private void NewSearch_Click(object sender, RoutedEventArgs e)
-        {
-            StatusText.Text = "Nueva búsqueda preparada. Conecta el servicio de prospección para ejecutarla.";
-            SearchBox.Focus();
-        }
-
-        private void Export_Click(object sender, RoutedEventArgs e)
-        {
-            var companies = (companiesView != null ? companiesView.Cast<Company>() : Companies).ToList();
-            if (companies.Count == 0)
+            navigating = true;
+            try
             {
-                StatusText.Text = "No hay resultados para exportar. Ejecuta una búsqueda primero.";
-                return;
+                navButtons[key].IsChecked = true;
+            }
+            finally
+            {
+                navigating = false;
             }
 
-            var dialog = new SaveFileDialog
+            if (entry.Page == null) entry.Page = entry.Create();
+            PageHost.Content = entry.Page;
+            PageScroll.ScrollToTop();
+
+            var page = entry.Page as IPage;
+            if (page != null) await page.OnNavigatedToAsync(parameter);
+        }
+
+        public void Navigate(string key, object parameter = null)
+        {
+            var ignored = NavigateAsync(key, parameter);
+        }
+
+        // ------------------------------------------------------------------ estado de la API
+
+        private async Task StartApiStatusAsync()
+        {
+            ApiClientFactory.WakingChanged += waking => Dispatcher.BeginInvoke(new Action(RefreshStatus));
+            RefreshStatus();
+
+            // Render free duerme el servicio: la primera llamada puede tardar ~50 s.
+            apiOk = await ApiClientFactory.PingAsync(TimeSpan.FromSeconds(95));
+            RefreshStatus();
+
+            pollTimer.Tick += async (sender, args) =>
             {
-                Title = "Exportar resultados",
-                Filter = "CSV (delimitado por punto y coma)|*.csv",
-                FileName = "negocios.csv",
-                AddExtension = true,
-                DefaultExt = ".csv",
+                apiOk = await ApiClientFactory.PingAsync(TimeSpan.FromSeconds(15));
+                RefreshStatus();
             };
-            if (dialog.ShowDialog(this) != true) return;
+            pollTimer.Start();
+        }
 
-            try
+        private void RefreshStatus()
+        {
+            if (ApiClientFactory.IsWaking && !apiOk)
             {
-                var builder = new StringBuilder();
-                builder.AppendLine("Empresa;Sector;Ubicacion;Correo;Telefono;Contacto;Fuente");
-                foreach (var company in companies)
-                {
-                    builder.AppendLine(string.Join(";",
-                        CsvField(company.Name), CsvField(company.Industry), CsvField(company.Location),
-                        CsvField(company.Email), CsvField(company.Phone), CsvField(company.Contact), CsvField(company.Source)));
-                }
-                File.WriteAllText(dialog.FileName, builder.ToString(), new UTF8Encoding(true));
-                StatusText.Text = string.Format("Exportados {0} resultado{1} a {2}.", companies.Count, companies.Count == 1 ? string.Empty : "s", dialog.FileName);
-            }
-            catch (Exception ex)
-            {
-                StatusText.Text = "No fue posible exportar: " + ex.Message;
-            }
-        }
-
-        private static string CsvField(string value)
-        {
-            value = value ?? string.Empty;
-            if (value.IndexOfAny(new[] { ';', '"', '\n', '\r' }) >= 0)
-                return "\"" + value.Replace("\"", "\"\"") + "\"";
-            return value;
-        }
-
-        // TEMPORAL: el mapa (GMap.NET) se reemplaza por WebView2 + Leaflet en el commit de la página Negocios.
-        private void ConfigureMap()
-        {
-            UpdateMapMarker();
-        }
-
-        private void Radius_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            UpdateMapMarker();
-        }
-
-        private void UpdateMapMarker()
-        {
-            if (MapCoordinates != null)
-                MapCoordinates.Text = string.Format(CultureInfo.InvariantCulture, "Centro: {0:F4}, {1:F4} · radio {2} km", selectedLatitude, selectedLongitude, SelectedRadiusKilometers());
-        }
-
-        private async void MapSearch_Click(object sender, RoutedEventArgs e)
-        {
-            var query = MapSearchBox == null ? string.Empty : MapSearchBox.Text.Trim();
-            if (string.IsNullOrWhiteSpace(query)) return;
-
-            try
-            {
-                MapSearchButton.IsEnabled = false;
-                StatusText.Text = "Buscando \"" + query + "\"…";
-                var url = "https://nominatim.openstreetmap.org/search?format=json&limit=1&q=" + Uri.EscapeDataString(query);
-                var response = await GeocodingClient.GetAsync(url);
-                response.EnsureSuccessStatusCode();
-                var raw = Json.DeserializeObject(await response.Content.ReadAsStringAsync()) as object[];
-                if (raw == null || raw.Length == 0)
-                {
-                    StatusText.Text = "No se encontraron resultados para \"" + query + "\".";
-                    return;
-                }
-
-                var first = raw[0] as IDictionary<string, object>;
-                double latitude, longitude;
-                if (first == null
-                    || !double.TryParse(Convert.ToString(first["lat"], CultureInfo.InvariantCulture), NumberStyles.Float, CultureInfo.InvariantCulture, out latitude)
-                    || !double.TryParse(Convert.ToString(first["lon"], CultureInfo.InvariantCulture), NumberStyles.Float, CultureInfo.InvariantCulture, out longitude))
-                {
-                    StatusText.Text = "No fue posible interpretar la ubicación encontrada.";
-                    return;
-                }
-
-                selectedLatitude = latitude;
-                selectedLongitude = longitude;
-                UpdateMapMarker();
-                var displayName = first.ContainsKey("display_name") ? first["display_name"] as string : query;
-                StatusText.Text = "Mapa centrado en " + (displayName ?? query) + ".";
-            }
-            catch (Exception ex)
-            {
-                StatusText.Text = "No fue posible buscar la ubicación: " + ex.Message;
-            }
-            finally
-            {
-                MapSearchButton.IsEnabled = true;
-            }
-        }
-
-        private void MapSearchBox_KeyDown(object sender, KeyEventArgs e)
-        {
-            if (e.Key == Key.Enter) MapSearch_Click(sender, e);
-        }
-
-        private int SelectedRadiusKilometers()
-        {
-            var item = RadiusBox == null ? null : RadiusBox.SelectedItem as ComboBoxItem;
-            int radius;
-            return item != null && int.TryParse(item.Tag as string, out radius) ? radius : 5;
-        }
-
-        // El Tag de cada ComboBoxItem guarda el basic_category real de Overture (en ingles);
-        // el Content es solo la etiqueta en espanol que ve el usuario.
-        private string SelectedCategorySlug()
-        {
-            var item = CategoryBox == null ? null : CategoryBox.SelectedItem as ComboBoxItem;
-            return item == null ? string.Empty : (item.Tag as string ?? string.Empty);
-        }
-
-        private async void RunSearch_Click(object sender, RoutedEventArgs e)
-        {
-            var radiusKm = SelectedRadiusKilometers();
-            var latitudeDelta = radiusKm / 111.32;
-            var longitudeDelta = radiusKm / (111.32 * Math.Cos(selectedLatitude * Math.PI / 180));
-            var category = SelectedCategorySlug();
-            var name = BusinessNameBox == null ? string.Empty : BusinessNameBox.Text.Trim();
-            var requestUri = string.Format(CultureInfo.InvariantCulture,
-                "api/places?minLongitude={0}&minLatitude={1}&maxLongitude={2}&maxLatitude={3}&limit=100{4}{5}",
-                selectedLongitude - longitudeDelta, selectedLatitude - latitudeDelta,
-                selectedLongitude + longitudeDelta, selectedLatitude + latitudeDelta,
-                string.IsNullOrWhiteSpace(category) ? string.Empty : "&category=" + Uri.EscapeDataString(category),
-                string.IsNullOrWhiteSpace(name) ? string.Empty : "&nameContains=" + Uri.EscapeDataString(name));
-
-            try
-            {
-                SearchButton.IsEnabled = false;
-                StatusText.Text = "Consultando Overture mediante la API local…";
-                var response = await ApiClient.GetAsync(requestUri);
-                response.EnsureSuccessStatusCode();
-                var payload = Json.Deserialize<PlacesResponse>(await response.Content.ReadAsStringAsync());
-                Companies.Clear();
-                foreach (var place in payload.Places ?? new PlaceDto[0])
-                {
-                    Companies.Add(FromPlace(place, "Overture"));
-                }
-                companiesView.Refresh();
-                UpdateResultCount();
-                StatusText.Text = string.Format("{0} negocios encontrados · Overture {1}", payload.Count, payload.ReleaseVersion ?? "");
-            }
-            catch (Exception ex)
-            {
-                StatusText.Text = "No fue posible conectar con la API: " + ex.Message;
-            }
-            finally
-            {
-                SearchButton.IsEnabled = true;
-            }
-        }
-
-        private async void LoadSavedBusinesses_Click(object sender, RoutedEventArgs e)
-        {
-            try
-            {
-                SavedBusinessesButton.IsEnabled = false;
-                StatusText.Text = "Cargando negocios guardados desde MongoDB…";
-                var response = await ApiClient.GetAsync("api/business?limit=1000");
-                response.EnsureSuccessStatusCode();
-                var places = Json.Deserialize<PlaceDto[]>(await response.Content.ReadAsStringAsync()) ?? new PlaceDto[0];
-                Companies.Clear();
-                foreach (var place in places) Companies.Add(FromPlace(place, "Base de datos"));
-                companiesView.Refresh();
-                UpdateResultCount();
-                StatusText.Text = string.Format("{0} negocios cargados desde la base de datos.", places.Length);
-                LoadDashboardStats();
-            }
-            catch (Exception ex)
-            {
-                StatusText.Text = "No fue posible cargar la base de datos: " + ex.Message;
-            }
-            finally
-            {
-                SavedBusinessesButton.IsEnabled = true;
-            }
-        }
-
-        private async void RunScrape_Click(object sender, RoutedEventArgs e)
-        {
-            var radiusKm = SelectedRadiusKilometers();
-            var latitudeDelta = radiusKm / 111.32;
-            var longitudeDelta = radiusKm / (111.32 * Math.Cos(selectedLatitude * Math.PI / 180));
-            var category = SelectedCategorySlug();
-            var name = BusinessNameBox == null ? string.Empty : BusinessNameBox.Text.Trim();
-            var requestUri = string.Format(CultureInfo.InvariantCulture,
-                "api/business/scrape?minLongitude={0}&minLatitude={1}&maxLongitude={2}&maxLatitude={3}&limit=100{4}{5}",
-                selectedLongitude - longitudeDelta, selectedLatitude - latitudeDelta,
-                selectedLongitude + longitudeDelta, selectedLatitude + latitudeDelta,
-                string.IsNullOrWhiteSpace(category) ? string.Empty : "&category=" + Uri.EscapeDataString(category),
-                string.IsNullOrWhiteSpace(name) ? string.Empty : "&nameContains=" + Uri.EscapeDataString(name));
-
-            try
-            {
-                ScrapeButton.IsEnabled = false;
-                StatusText.Text = "Scrapeando Overture y guardando en MongoDB…";
-                var response = await ApiClient.PostAsync(requestUri, null);
-                response.EnsureSuccessStatusCode();
-                var result = Json.Deserialize<ScrapeResultDto>(await response.Content.ReadAsStringAsync());
-                StatusText.Text = string.Format(CultureInfo.InvariantCulture,
-                    "Scrape completo · {0} obtenidos, {1} guardados en la base de datos (Overture {2}).",
-                    result.FetchedCount, result.PersistedCount, result.ReleaseVersion ?? "");
-                LoadDashboardStats();
-            }
-            catch (Exception ex)
-            {
-                StatusText.Text = "No fue posible completar el scrape: " + ex.Message;
-            }
-            finally
-            {
-                ScrapeButton.IsEnabled = true;
-            }
-        }
-
-        private async void LoadDashboardStats()
-        {
-            try
-            {
-                var businessTask = ApiClient.GetAsync("api/business/stats");
-                var emailTask = ApiClient.GetAsync("api/crm/stats");
-                await Task.WhenAll(businessTask, emailTask);
-
-                var businessResponse = businessTask.Result;
-                businessResponse.EnsureSuccessStatusCode();
-                var stats = Json.Deserialize<BusinessStatsDto>(await businessResponse.Content.ReadAsStringAsync());
-                if (stats != null)
-                {
-                    if (StatTotalCompanies != null) StatTotalCompanies.Text = stats.TotalCount.ToString("N0", CultureInfo.InvariantCulture);
-                    if (StatWithContact != null) StatWithContact.Text = stats.WithContactCount.ToString("N0", CultureInfo.InvariantCulture);
-                    if (StatActiveSources != null) StatActiveSources.Text = stats.ActiveSourceCount.ToString(CultureInfo.InvariantCulture);
-
-                    DateTime lastRunUtc;
-                    if (StatLastRun != null)
-                    {
-                        StatLastRun.Text = DateTime.TryParse(stats.LastScrapedAtUtc, CultureInfo.InvariantCulture,
-                            DateTimeStyles.RoundtripKind, out lastRunUtc)
-                            ? FormatLastRun(lastRunUtc)
-                            : "Sin ejecuciones";
-                    }
-                }
-
-                var emailResponse = emailTask.Result;
-                emailResponse.EnsureSuccessStatusCode();
-                var emailStats = Json.Deserialize<EmailStatsDto>(await emailResponse.Content.ReadAsStringAsync());
-                if (emailStats != null)
-                {
-                    if (StatEmailsSent != null) StatEmailsSent.Text = emailStats.SentCount.ToString("N0", CultureInfo.InvariantCulture);
-                    if (StatEmailsFailed != null) StatEmailsFailed.Text = emailStats.FailedCount.ToString("N0", CultureInfo.InvariantCulture);
-                    if (StatBusinessesWithEmail != null) StatBusinessesWithEmail.Text = emailStats.BusinessesWithEmailCount.ToString("N0", CultureInfo.InvariantCulture);
-
-                    DateTime lastEmailUtc;
-                    if (StatLastEmail != null)
-                    {
-                        StatLastEmail.Text = DateTime.TryParse(emailStats.LastSentAtUtc, CultureInfo.InvariantCulture,
-                            DateTimeStyles.RoundtripKind, out lastEmailUtc)
-                            ? FormatLastRun(lastEmailUtc)
-                            : "Sin envíos";
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                if (StatusText != null) StatusText.Text = "No fue posible cargar las estadísticas: " + ex.Message;
-            }
-        }
-
-        private static string FormatLastRun(DateTime utcTime)
-        {
-            var local = utcTime.ToLocalTime();
-            return local.Date == DateTime.Now.Date
-                ? string.Format(CultureInfo.InvariantCulture, "Hoy · {0:HH:mm}", local)
-                : string.Format(CultureInfo.InvariantCulture, "{0:dd/MM} · {0:HH:mm}", local);
-        }
-
-        private static Company FromPlace(PlaceDto place, string source)
-        {
-            var email = FirstNonEmpty(place.Emails);
-            var phone = FirstNonEmpty(place.Phones);
-            return new Company(place.Name ?? "Sin nombre", place.MainCategory ?? place.DetailedCategory ?? "Sin categoría",
-                JoinLocation(place.Locality, place.Region, place.Country),
-                email ?? phone ?? FirstNonEmpty(place.Websites) ?? "Sin contacto", source,
-                place.Country, place.Region, place.Locality, email, phone);
-        }
-
-        private static string JoinLocation(string locality, string region, string country)
-        {
-            return string.Join(", ", new[] { locality, region, country }.Where(value => !string.IsNullOrWhiteSpace(value)));
-        }
-
-        private static string FirstOrDefault(string[] emails, string[] phones, string[] websites)
-        {
-            return (emails ?? new string[0]).FirstOrDefault() ?? (phones ?? new string[0]).FirstOrDefault() ?? (websites ?? new string[0]).FirstOrDefault() ?? "Sin contacto";
-        }
-
-        private static string FirstNonEmpty(string[] values)
-        {
-            return (values ?? new string[0]).FirstOrDefault(v => !string.IsNullOrWhiteSpace(v));
-        }
-
-        private void TitleBar_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
-        {
-            if (e.ClickCount == 2)
-            {
-                ToggleWindowState();
+                SetStatus(ApiClientFactory.WakingMessage, "Gold");
                 return;
             }
-            DragMove();
+            if (apiOk) SetStatus("API conectada", "Green");
+            else SetStatus("API sin conexión", "Ember");
         }
 
-        private void Minimize_Click(object sender, RoutedEventArgs e)
+        private void SetStatus(string text, string accent)
         {
-            WindowState = WindowState.Minimized;
+            var brush = (Brush)FindResource(accent + "Brush");
+            StatusText.Text = text;
+            StatusText.Foreground = brush;
+            StatusDot.Fill = brush;
+            StatusPill.BorderBrush = (Brush)FindResource(accent + "LineBrush");
+            StatusPill.ToolTip = text;
         }
-
-        private void Maximize_Click(object sender, RoutedEventArgs e)
-        {
-            ToggleWindowState();
-        }
-
-        private void Close_Click(object sender, RoutedEventArgs e)
-        {
-            Close();
-        }
-
-        private void ToggleWindowState()
-        {
-            WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
-        }
-    }
-
-    public sealed class Company
-    {
-        public Company(string name, string industry, string location, string contact, string source, string country = null, string region = null, string city = null, string email = null, string phone = null)
-        {
-            Name = name; Industry = industry; Location = location; Contact = contact; Source = source; Country = country; Region = region; City = city;
-            Email = email; Phone = phone;
-        }
-        public string Name { get; private set; }
-        public string Industry { get; private set; }
-        public string Location { get; private set; }
-        public string Contact { get; private set; }
-        public string Source { get; private set; }
-        public string Country { get; private set; }
-        public string Region { get; private set; }
-        public string City { get; private set; }
-        public string Email { get; private set; }
-        public string Phone { get; private set; }
-        public bool HasEmail => !string.IsNullOrWhiteSpace(Email);
-        public bool HasPhone => !string.IsNullOrWhiteSpace(Phone);
-    }
-
-    public sealed class PlacesResponse
-    {
-        public string ReleaseVersion { get; set; }
-        public int Count { get; set; }
-        public PlaceDto[] Places { get; set; }
-    }
-
-    public sealed class PlaceDto
-    {
-        public string Name { get; set; }
-        public string MainCategory { get; set; }
-        public string DetailedCategory { get; set; }
-        public string Locality { get; set; }
-        public string Region { get; set; }
-        public string Country { get; set; }
-        public string[] Emails { get; set; }
-        public string[] Phones { get; set; }
-        public string[] Websites { get; set; }
-    }
-
-    public sealed class ScrapeResultDto
-    {
-        public string ReleaseVersion { get; set; }
-        public int FetchedCount { get; set; }
-        public long PersistedCount { get; set; }
-    }
-
-    public sealed class BusinessStatsDto
-    {
-        public long TotalCount { get; set; }
-        public long WithContactCount { get; set; }
-        public int ActiveSourceCount { get; set; }
-        public string LastScrapedAtUtc { get; set; }
     }
 }

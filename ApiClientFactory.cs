@@ -32,6 +32,23 @@ namespace LoboEstepario
         /// <summary>Se dispara (en cualquier hilo) cuando cambia <see cref="IsWaking"/>.</summary>
         public static event Action<bool> WakingChanged;
 
+        /// <summary>GET api/health. Devuelve false ante cualquier error o si se agota <paramref name="timeout"/>.</summary>
+        public static async Task<bool> PingAsync(TimeSpan timeout)
+        {
+            try
+            {
+                using (var cts = new CancellationTokenSource(timeout))
+                using (var response = await Client.GetAsync("api/health", cts.Token).ConfigureAwait(false))
+                {
+                    return response.IsSuccessStatusCode;
+                }
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+
         private static string ResolveBaseUrl()
         {
             // Sobreescritura para desarrollo local, p. ej. http://localhost:5080/
