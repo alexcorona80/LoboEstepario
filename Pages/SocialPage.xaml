@@ -1,0 +1,142 @@
+<UserControl x:Class="LoboEstepario.Pages.SocialPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <StackPanel>
+    <StackPanel Margin="0,0,0,24">
+      <TextBlock Text="CONTENIDO" Style="{StaticResource Eyebrow}"/>
+      <TextBlock Text="Redes sociales" Style="{StaticResource PageTitle}"/>
+      <TextBlock Style="{StaticResource PageLead}"
+                 Text="Genera texto e imagen con el agente de IA, publica en Facebook e Instagram con la cuenta conectada y reenvía el mismo mensaje por correo a las empresas seleccionadas."/>
+    </StackPanel>
+
+    <Border x:Name="AiWarning" Style="{StaticResource AlertWarn}" Margin="0,0,0,20" Visibility="Collapsed">
+      <StackPanel>
+        <TextBlock Text="Falta configurar el agente de IA" FontWeight="SemiBold" Foreground="{StaticResource TextBrush}"/>
+        <TextBlock TextWrapping="Wrap" Margin="0,3,0,0">
+          <Run Text="Indica el proveedor, modelo y API key en "/><Hyperlink Click="OpenConfig_Click" Foreground="{StaticResource GoldBrush}">Configuración</Hyperlink><Run Text=" para poder generar el contenido."/>
+        </TextBlock>
+      </StackPanel>
+    </Border>
+
+    <Grid>
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="*"/>
+        <ColumnDefinition Width="20"/>
+        <ColumnDefinition Width="*"/>
+      </Grid.ColumnDefinitions>
+
+      <!-- 1 · Generar contenido -->
+      <Border Grid.Column="0" Style="{StaticResource Card}" VerticalAlignment="Top">
+        <StackPanel>
+          <DockPanel Margin="0,0,0,16">
+            <TextBlock DockPanel.Dock="Right" Text="agente de IA" Style="{StaticResource Hint}" VerticalAlignment="Center"/>
+            <TextBlock Text="1 · Generar contenido" Style="{StaticResource SectionTitle}"/>
+          </DockPanel>
+
+          <TextBlock Text="TEMA DE LA PUBLICACIÓN" Style="{StaticResource FieldLabel}"/>
+          <Grid>
+            <TextBox x:Name="TopicBox" TextChanged="TopicBox_TextChanged"/>
+            <TextBlock x:Name="TopicPlaceholder" Style="{StaticResource Hint}" IsHitTestVisible="False"
+                       VerticalAlignment="Center" Margin="14,0,14,0" TextTrimming="CharacterEllipsis"
+                       Text="ej. promoción de temporada, apertura de sucursal…"/>
+          </Grid>
+
+          <WrapPanel Margin="0,14,0,0">
+            <CheckBox x:Name="UseFacebookBox" Content="Facebook" IsChecked="True" Margin="0,0,22,0"/>
+            <CheckBox x:Name="UseInstagramBox" Content="Instagram" Margin="0,0,22,0"/>
+            <CheckBox x:Name="UseEmailBox" Content="Correo electrónico"/>
+          </WrapPanel>
+
+          <Button x:Name="GenerateButton" Style="{StaticResource VioletButton}" Content="Generar imagen y texto"
+                  HorizontalAlignment="Left" Margin="0,16,0,0" Click="Generate_Click"/>
+        </StackPanel>
+      </Border>
+
+      <!-- 2 · Revisar y publicar -->
+      <Border Grid.Column="2" Style="{StaticResource Card}" VerticalAlignment="Top">
+        <StackPanel>
+          <DockPanel Margin="0,0,0,16">
+            <TextBlock DockPanel.Dock="Right" Text="ajusta el texto antes de publicar" Style="{StaticResource Hint}" VerticalAlignment="Center"/>
+            <TextBlock Text="2 · Revisar y publicar" Style="{StaticResource SectionTitle}"/>
+          </DockPanel>
+
+          <TextBlock Text="TEXTO DE LA PUBLICACIÓN" Style="{StaticResource FieldLabel}"/>
+          <Grid>
+            <TextBox x:Name="BodyBox" Style="{StaticResource MultilineTextBox}" MinHeight="150" Height="150"
+                     AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"
+                     TextChanged="BodyBox_TextChanged"/>
+            <TextBlock x:Name="BodyPlaceholder" Text="El texto generado aparecerá aquí…" Style="{StaticResource Hint}"
+                       IsHitTestVisible="False" Margin="14,11,14,0" VerticalAlignment="Top"/>
+          </Grid>
+
+          <Border x:Name="PreviewWrap" Visibility="Collapsed" Margin="0,14,0,0" Style="{StaticResource TableWrap}" Padding="8">
+            <Image x:Name="PreviewImage" MaxHeight="260" Stretch="Uniform" HorizontalAlignment="Center"/>
+          </Border>
+
+          <TextBlock Margin="0,14,0,7">
+            <Run Text="URL PÚBLICA DE LA IMAGEN" Foreground="{StaticResource MutedBrush}" FontSize="12" FontWeight="SemiBold"/>
+            <Run Text="  (solo Instagram)" Foreground="{StaticResource FaintBrush}" FontSize="12"/>
+          </TextBlock>
+          <Grid>
+            <TextBox x:Name="PublicImageUrlBox" TextChanged="PublicImageUrlBox_TextChanged"/>
+            <TextBlock x:Name="UrlPlaceholder" Style="{StaticResource Hint}" IsHitTestVisible="False"
+                       VerticalAlignment="Center" Margin="14,0,14,0" TextTrimming="CharacterEllipsis"
+                       Text="https://…/imagen.png (Instagram la descarga por URL)"/>
+          </Grid>
+
+          <WrapPanel Margin="0,16,0,0">
+            <Button x:Name="PublishButton" Style="{StaticResource PrimaryButton}" Content="Publicar" Margin="0,0,10,0" Click="Publish_Click"/>
+            <Button x:Name="EmailButton" Content="Enviar por correo" Click="Email_Click"/>
+          </WrapPanel>
+        </StackPanel>
+      </Border>
+    </Grid>
+
+    <!-- Destinatarios -->
+    <Border Style="{StaticResource Card}" Margin="0,24,0,0">
+      <StackPanel>
+        <DockPanel Margin="0,0,0,16">
+          <TextBlock x:Name="RecipientCountText" DockPanel.Dock="Right" Style="{StaticResource Hint}" VerticalAlignment="Center"/>
+          <TextBlock Text="Destinatarios del correo" Style="{StaticResource SectionTitle}"/>
+        </DockPanel>
+
+        <DockPanel Margin="0,0,0,12">
+          <Button DockPanel.Dock="Right" Style="{StaticResource SmallButton}" Content="Recargar" Margin="8,0,0,0" Click="Reload_Click"/>
+          <Button DockPanel.Dock="Right" Style="{StaticResource SmallButton}" Content="Seleccionar todos" Margin="8,0,0,0" Click="SelectAll_Click"/>
+          <Grid>
+            <TextBox x:Name="RecipientSearchBox" TextChanged="RecipientSearchBox_TextChanged"/>
+            <TextBlock x:Name="SearchPlaceholder" Text="Buscar destinatario…" Style="{StaticResource Hint}"
+                       IsHitTestVisible="False" VerticalAlignment="Center" Margin="14,0,14,0"/>
+          </Grid>
+        </DockPanel>
+
+        <Border x:Name="RecipientsEmpty" Style="{StaticResource EmptyState}" Padding="14,26" Visibility="Collapsed">
+          <StackPanel HorizontalAlignment="Center">
+            <TextBlock Text="✉" FontSize="26" HorizontalAlignment="Center" Margin="0,0,0,6"/>
+            <TextBlock Text="Sin destinatarios" FontWeight="SemiBold" Foreground="{StaticResource TextSoftBrush}" HorizontalAlignment="Center"/>
+            <TextBlock Text="Guarda negocios con correo en «Buscar negocios»." HorizontalAlignment="Center" Margin="0,2,0,0"/>
+          </StackPanel>
+        </Border>
+
+        <Border x:Name="RecipientsWrap" Style="{StaticResource TableWrap}" Height="340">
+          <DataGrid x:Name="RecipientsGrid">
+            <DataGrid.Columns>
+              <DataGridTemplateColumn Width="56">
+                <DataGridTemplateColumn.CellTemplate>
+                  <DataTemplate>
+                    <CheckBox IsChecked="{Binding Selected, UpdateSourceTrigger=PropertyChanged}" HorizontalAlignment="Center"/>
+                  </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+              </DataGridTemplateColumn>
+              <DataGridTextColumn Header="EMPRESA" Binding="{Binding Name}" Width="*"/>
+              <DataGridTextColumn Header="CORREO" Binding="{Binding Email}" Width="*"/>
+              <DataGridTextColumn Header="UBICACIÓN" Binding="{Binding Location}" Width="*"/>
+            </DataGrid.Columns>
+          </DataGrid>
+        </Border>
+      </StackPanel>
+    </Border>
+
+    <TextBlock x:Name="StatusText" Style="{StaticResource StatusLine}" Margin="0,24,0,0"/>
+  </StackPanel>
+</UserControl>
