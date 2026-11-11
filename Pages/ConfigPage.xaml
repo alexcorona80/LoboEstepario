@@ -1,0 +1,200 @@
+﻿<UserControl x:Class="LoboEstepario.Pages.ConfigPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <UserControl.Resources>
+    <Style x:Key="Field" TargetType="StackPanel">
+      <Setter Property="Margin" Value="0,0,16,12"/>
+    </Style>
+    <Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+      <!-- El ScrollViewer interno del template ya aplica el Padding: se reduce para igualar la altura de la web -->
+      <Setter Property="Padding" Value="6,5"/>
+    </Style>
+    <Style TargetType="PasswordBox" BasedOn="{StaticResource {x:Type PasswordBox}}">
+      <!-- El ScrollViewer interno del template ya aplica el Padding: se reduce para igualar la altura de la web -->
+      <Setter Property="Padding" Value="6,5"/>
+    </Style>
+  </UserControl.Resources>
+  <StackPanel>
+    <StackPanel Margin="0,0,0,24">
+      <TextBlock Text="AJUSTES LOCALES" Style="{StaticResource Eyebrow}"/>
+      <TextBlock Text="Configuración" Style="{StaticResource PageTitle}"/>
+      <TextBlock Style="{StaticResource PageLead}" Text="Correo electrónico, Facebook, Instagram y el agente de IA. Estos datos alimentan el CRM, el módulo de redes sociales y la generación de contenido."/>
+    </StackPanel>
+
+    <Border x:Name="ClosureAlert" Style="{StaticResource AlertOk}" Margin="0,0,0,20" Visibility="Collapsed">
+      <TextBlock TextWrapping="Wrap"><Run Text="Guardado " FontWeight="Bold"/><Run x:Name="ClosureRun"/></TextBlock>
+    </Border>
+
+    <Border Style="{StaticResource Card}" Margin="0,0,0,20">
+      <StackPanel>
+        <DockPanel Margin="0,0,0,16">
+          <TextBlock DockPanel.Dock="Right" Text="remitente del CRM" Style="{StaticResource Hint}" VerticalAlignment="Center"/>
+          <TextBlock Text="Correo electrónico" Style="{StaticResource SectionTitle}"/>
+        </DockPanel>
+        <StackPanel Style="{StaticResource Field}" Width="320" HorizontalAlignment="Left" Margin="0,0,0,14">
+          <TextBlock Text="PROVEEDOR DE CORREO" Style="{StaticResource FieldLabel}"/>
+          <ComboBox x:Name="ProviderBox" SelectionChanged="ProviderBox_SelectionChanged"><ComboBoxItem Tag="Gmail" Content="Gmail"/><ComboBoxItem Tag="Office365" Content="Outlook / Microsoft 365"/><ComboBoxItem Tag="Yahoo" Content="Yahoo"/><ComboBoxItem Tag="Otro" Content="Otro (personalizado)"/></ComboBox>
+        </StackPanel>
+        <WrapPanel>
+          <StackPanel Style="{StaticResource Field}" Width="250">
+            <TextBlock Text="HOST SMTP" Style="{StaticResource FieldLabel}"/>
+            <TextBox x:Name="SmtpHostBox"/>
+          </StackPanel>
+          <StackPanel Style="{StaticResource Field}" Width="120">
+            <TextBlock Text="PUERTO" Style="{StaticResource FieldLabel}"/>
+            <TextBox x:Name="SmtpPortBox"/>
+          </StackPanel>
+          <StackPanel Style="{StaticResource Field}" Width="250">
+            <TextBlock Text="USUARIO (CORREO REMITENTE)" Style="{StaticResource FieldLabel}"/>
+            <TextBox x:Name="SmtpUserBox"/>
+          </StackPanel>
+          <StackPanel Style="{StaticResource Field}" Width="250">
+            <TextBlock Text="NOMBRE DEL REMITENTE" Style="{StaticResource FieldLabel}"/>
+            <TextBox x:Name="FromNameBox"/>
+          </StackPanel>
+          <StackPanel Style="{StaticResource Field}" Width="250">
+            <TextBlock Text="CONTRASEÑA" Style="{StaticResource FieldLabel}"/>
+            <PasswordBox x:Name="SmtpPasswordBox"/>
+          </StackPanel>
+        </WrapPanel>
+        <WrapPanel Margin="0,16,0,0">
+          <CheckBox x:Name="UseSslBox" Content="Usar SSL / TLS" IsChecked="True" VerticalAlignment="Center" Margin="0,0,16,0"/>
+          <Button x:Name="SaveSmtpButton" Content="Guardar cuenta de correo" Style="{StaticResource PrimaryButton}" Click="SaveAccount_Click" Margin="0,0,12,0"/>
+          <Button x:Name="TestButton" Content="Enviar correo de prueba" Click="SendTest_Click"/>
+        </WrapPanel>
+        <TextBlock Style="{StaticResource Hint}" Margin="0,8,0,0"><Run Text="La prueba se envía a "/><Run x:Name="TestTargetRun" FontWeight="Bold" Foreground="{StaticResource TextBrush}"/><Run Text=" si el usuario está definido."/></TextBlock>
+        <TextBlock x:Name="SmtpStatus" Style="{StaticResource StatusLine}" Margin="0,8,0,0" TextWrapping="Wrap"/>
+      </StackPanel>
+    </Border>
+
+    <Border Style="{StaticResource Card}" Margin="0,0,0,20">
+      <StackPanel>
+        <DockPanel Margin="0,0,0,16">
+          <TextBlock DockPanel.Dock="Right" Text="publicar en tu Página" Style="{StaticResource Hint}" VerticalAlignment="Center"/>
+          <TextBlock Text="Facebook" Style="{StaticResource SectionTitle}"/>
+        </DockPanel>
+        <TextBlock Style="{StaticResource PageLead}" Margin="0,0,0,16" Text="Publica texto e imágenes en una Página de Facebook con la Graph API de Meta."/>
+        <WrapPanel>
+          <StackPanel Style="{StaticResource Field}" Width="250">
+            <TextBlock Text="ID DE LA PÁGINA" Style="{StaticResource FieldLabel}"/>
+            <TextBox x:Name="FbPageIdBox"/>
+          </StackPanel>
+          <StackPanel Style="{StaticResource Field}" Width="350">
+            <TextBlock Text="TOKEN DE ACCESO DE LA PÁGINA" Style="{StaticResource FieldLabel}"/>
+            <PasswordBox x:Name="FbTokenBox"/>
+          </StackPanel>
+          <StackPanel Style="{StaticResource Field}" Width="250">
+            <TextBlock Text="ID DE LA APP (META)" Style="{StaticResource FieldLabel}"/>
+            <TextBox x:Name="FbAppIdBox"/>
+          </StackPanel>
+          <StackPanel Style="{StaticResource Field}" Width="250">
+            <TextBlock Text="SECRETO DE LA APP" Style="{StaticResource FieldLabel}"/>
+            <PasswordBox x:Name="FbAppSecretBox"/>
+          </StackPanel>
+        </WrapPanel>
+        <Button x:Name="SaveFbButton" Content="Guardar Facebook" Style="{StaticResource PrimaryButton}" Click="SaveFacebook_Click" HorizontalAlignment="Left" Margin="0,16,0,0"/>
+        <TextBlock x:Name="FbStatus" Style="{StaticResource StatusLine}" Margin="0,8,0,0" TextWrapping="Wrap"/>
+      </StackPanel>
+    </Border>
+
+    <Border Style="{StaticResource Card}" Margin="0,0,0,20">
+      <StackPanel>
+        <DockPanel Margin="0,0,0,16">
+          <TextBlock DockPanel.Dock="Right" Text="cuenta profesional vinculada a la Página" Style="{StaticResource Hint}" VerticalAlignment="Center"/>
+          <TextBlock Text="Instagram" Style="{StaticResource SectionTitle}"/>
+        </DockPanel>
+        <TextBlock Style="{StaticResource PageLead}" Margin="0,0,0,16" Text="La cuenta debe ser profesional (business o creator) y estar vinculada a una Página de Facebook. La API publica en 2 pasos: crea un contenedor y luego lo publica."/>
+        <WrapPanel>
+          <StackPanel Style="{StaticResource Field}" Width="250">
+            <TextBlock Text="ID DE LA CUENTA DE NEGOCIO (IG)" Style="{StaticResource FieldLabel}"/>
+            <TextBox x:Name="IgAccountIdBox"/>
+          </StackPanel>
+          <StackPanel Style="{StaticResource Field}" Width="350">
+            <TextBlock Text="TOKEN DE ACCESO (FACEBOOK LOGIN)" Style="{StaticResource FieldLabel}"/>
+            <PasswordBox x:Name="IgTokenBox"/>
+          </StackPanel>
+          <StackPanel Style="{StaticResource Field}" Width="250">
+            <TextBlock Text="ID DE LA APP (META)" Style="{StaticResource FieldLabel}"/>
+            <TextBox x:Name="IgAppIdBox"/>
+          </StackPanel>
+          <StackPanel Style="{StaticResource Field}" Width="250">
+            <TextBlock Text="SECRETO DE LA APP" Style="{StaticResource FieldLabel}"/>
+            <PasswordBox x:Name="IgAppSecretBox"/>
+          </StackPanel>
+        </WrapPanel>
+        <Button x:Name="SaveIgButton" Content="Guardar Instagram" Style="{StaticResource PrimaryButton}" Click="SaveInstagram_Click" HorizontalAlignment="Left" Margin="0,16,0,0"/>
+        <TextBlock x:Name="IgStatus" Style="{StaticResource StatusLine}" Margin="0,8,0,0" TextWrapping="Wrap"/>
+      </StackPanel>
+    </Border>
+
+    <Border Style="{StaticResource Card}" Margin="0,0,0,20">
+      <StackPanel>
+        <DockPanel Margin="0,0,0,16">
+          <TextBlock DockPanel.Dock="Right" Text="texto e imágenes de las publicaciones" Style="{StaticResource Hint}" VerticalAlignment="Center"/>
+          <TextBlock Text="Agente de IA" Style="{StaticResource SectionTitle}"/>
+        </DockPanel>
+        <StackPanel Style="{StaticResource Field}" Width="360" HorizontalAlignment="Left" Margin="0,0,0,14">
+          <TextBlock Text="PROVEEDOR" Style="{StaticResource FieldLabel}"/>
+          <ComboBox x:Name="AiProviderBox" SelectionChanged="AiProviderBox_SelectionChanged"><ComboBoxItem Tag="openai" Content="OpenAI"/><ComboBoxItem Tag="azure_openai" Content="Azure OpenAI"/><ComboBoxItem Tag="anthropic" Content="Anthropic"/><ComboBoxItem Tag="google_gemini" Content="Google Gemini"/><ComboBoxItem Tag="openai_compatible" Content="Otro (OpenAI-compatible)"/></ComboBox>
+        </StackPanel>
+        <WrapPanel>
+          <StackPanel Style="{StaticResource Field}" Width="300">
+            <TextBlock Text="BASE URL (OPCIONAL)" Style="{StaticResource FieldLabel}"/>
+            <TextBox x:Name="AiBaseUrlBox"/>
+          </StackPanel>
+          <StackPanel Style="{StaticResource Field}" Width="250">
+            <TextBlock Text="MODELO DE TEXTO" Style="{StaticResource FieldLabel}"/>
+            <TextBox x:Name="AiModelBox"/>
+          </StackPanel>
+          <StackPanel Style="{StaticResource Field}" Width="250">
+            <TextBlock Text="MODELO DE IMÁGENES" Style="{StaticResource FieldLabel}"/>
+            <TextBox x:Name="AiImageModelBox"/>
+          </StackPanel>
+          <StackPanel Style="{StaticResource Field}" Width="250">
+            <TextBlock Text="API KEY" Style="{StaticResource FieldLabel}"/>
+            <PasswordBox x:Name="AiApiKeyBox"/>
+          </StackPanel>
+        </WrapPanel>
+        <Button x:Name="SaveAiButton" Content="Guardar agente de IA" Style="{StaticResource PrimaryButton}" Click="SaveAiAgent_Click" HorizontalAlignment="Left" Margin="0,16,0,0"/>
+        <TextBlock x:Name="AiStatus" Style="{StaticResource StatusLine}" Margin="0,8,0,0" TextWrapping="Wrap"/>
+      </StackPanel>
+    </Border>
+
+    <Border Style="{StaticResource Card}" Margin="0,0,0,20">
+      <StackPanel>
+        <DockPanel Margin="0,0,0,16">
+          <TextBlock DockPanel.Dock="Right" Text="qué necesitas antes de publicar" Style="{StaticResource Hint}" VerticalAlignment="Center"/>
+          <TextBlock Text="Requisitos para publicar contenido" Style="{StaticResource SectionTitle}"/>
+        </DockPanel>
+        <TextBlock Text="FACEBOOK · Pages API" Foreground="{StaticResource GoldHiBrush}" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8"/>
+        <StackPanel Margin="0,0,0,16">
+          <DockPanel Margin="0,0,0,4"><TextBlock DockPanel.Dock="Left" Text="•  " Style="{StaticResource Hint}"/><TextBlock Text="Una Página de Facebook (puede estar sin publicar) sobre la que tengas rol con tarea CREATE_CONTENT." Style="{StaticResource Hint}" TextWrapping="Wrap"/></DockPanel>
+          <DockPanel Margin="0,0,0,4"><TextBlock DockPanel.Dock="Left" Text="•  " Style="{StaticResource Hint}"/><TextBlock Text="Token de acceso de Página emitido por ese rol: en Graph Explorer pide pages_manage_posts, pages_manage_metadata, pages_read_engagement y pages_show_list, y consulta GET /me/accounts." Style="{StaticResource Hint}" TextWrapping="Wrap"/></DockPanel>
+          <DockPanel Margin="0,0,0,4"><TextBlock DockPanel.Dock="Left" Text="•  " Style="{StaticResource Hint}"/><TextBlock Text="{}Publicar: POST /{page-id}/feed con message y access_token. Para vídeo se necesita además el permiso publish_video." Style="{StaticResource Hint}" TextWrapping="Wrap"/></DockPanel>
+        </StackPanel>
+        <TextBlock Text="INSTAGRAM · Instagram Graph API (Facebook Login)" Foreground="{StaticResource GoldHiBrush}" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8"/>
+        <StackPanel>
+          <DockPanel Margin="0,0,0,4"><TextBlock DockPanel.Dock="Left" Text="•  " Style="{StaticResource Hint}"/><TextBlock Text="Cuenta de Instagram profesional (business o creator) vinculada a una Página de Facebook, con rol CREATE_CONTENT/MANAGE sobre la página." Style="{StaticResource Hint}" TextWrapping="Wrap"/></DockPanel>
+          <DockPanel Margin="0,0,0,4"><TextBlock DockPanel.Dock="Left" Text="•  " Style="{StaticResource Hint}"/><TextBlock Text="Permisos: instagram_basic, instagram_content_publish y pages_read_engagement." Style="{StaticResource Hint}" TextWrapping="Wrap"/></DockPanel>
+          <DockPanel Margin="0,0,0,4"><TextBlock DockPanel.Dock="Left" Text="•  " Style="{StaticResource Hint}"/><TextBlock Text="El archivo (imagen o vídeo) debe estar alojado en un servidor público; la API lo descarga por URL." Style="{StaticResource Hint}" TextWrapping="Wrap"/></DockPanel>
+          <DockPanel Margin="0,0,0,4"><TextBlock DockPanel.Dock="Left" Text="•  " Style="{StaticResource Hint}"/><TextBlock Text="{}Publicar en 2 pasos: 1) POST /{ig-user-id}/media con image_url o video_url (crea el contenedor), 2) POST /{ig-user-id}/media_publish con creation_id." Style="{StaticResource Hint}" TextWrapping="Wrap"/></DockPanel>
+          <DockPanel Margin="0,0,0,4"><TextBlock DockPanel.Dock="Left" Text="•  " Style="{StaticResource Hint}"/><TextBlock Text="Límite de publicación: 100 por cada 24 horas." Style="{StaticResource Hint}" TextWrapping="Wrap"/></DockPanel>
+        </StackPanel>
+      </StackPanel>
+    </Border>
+
+    <Border Style="{StaticResource Card}" Margin="0,0,0,20">
+      <StackPanel>
+        <DockPanel Margin="0,0,0,16">
+          <TextBlock DockPanel.Dock="Right" Text="información de esta instalación" Style="{StaticResource Hint}" VerticalAlignment="Center"/>
+          <TextBlock Text="Conexión y archivo de ajustes" Style="{StaticResource SectionTitle}"/>
+        </DockPanel>
+        <TextBlock Text="URL DE LA API" Style="{StaticResource FieldLabel}"/>
+        <TextBlock x:Name="ApiUrlText" Style="{StaticResource MonoText}" Margin="0,0,0,12" TextWrapping="Wrap"/>
+        <TextBlock Text="ARCHIVO DE AJUSTES" Style="{StaticResource FieldLabel}"/>
+        <TextBlock x:Name="SettingsPathText" Style="{StaticResource MonoText}" Margin="0,0,0,12" TextWrapping="Wrap"/>
+        <TextBlock Style="{StaticResource Hint}" TextWrapping="Wrap" Text="Para desarrollo local, apunta la app a otra API con la variable de entorno LOBO_ApiBaseUrl o con la clave ApiBaseUrl en settings.json."/>
+      </StackPanel>
+    </Border>
+  </StackPanel>
+</UserControl>
