@@ -35,8 +35,6 @@ namespace LoboEstepario.Pages
         private string statusMessage = "";
         private bool statusIsError;
         private bool syncing;
-        private bool loadingCategories;
-        private bool categoriesLoaded;
         private bool initialized;
 
         public NegociosPage()
@@ -49,13 +47,11 @@ namespace LoboEstepario.Pages
             LngBox.Text = "-103.3490";
 
             view = CollectionViewSource.GetDefaultView(companies);
-            view.Filter = MatchesSearch;
             ResultsGrid.ItemsSource = view;
 
             Map.CenterChanged += OnMapCenterChanged;
             Map.SetCenter(20.6760, -103.3490);
             Map.SetRadius(2);
-            ResetSavedCategories(new List<string>());
             RefreshCenterHint();
             RefreshState();
             initialized = true;
@@ -68,9 +64,9 @@ namespace LoboEstepario.Pages
             return client;
         }
 
-        public async Task OnNavigatedToAsync(object parameter)
+        public Task OnNavigatedToAsync(object parameter)
         {
-            if (!categoriesLoaded) await LoadSavedCategoriesAsync();
+            return Task.CompletedTask;
         }
 
         private void OnLoaded(object sender, RoutedEventArgs e)
@@ -113,7 +109,6 @@ namespace LoboEstepario.Pages
             SourceRun.Text = currentSource;
 
             var count = view.Cast<object>().Count();
-            CountText.Text = count + " resultado(s)";
 
             BusyLine.Visibility = Busy ? Visibility.Visible : Visibility.Collapsed;
             EmptyPanel.Visibility = !Busy && count == 0 ? Visibility.Visible : Visibility.Collapsed;
@@ -121,8 +116,7 @@ namespace LoboEstepario.Pages
 
             SearchButton.Content = Busy && actionName == "buscando" ? "Buscando…" : "Buscar en Overture";
             ScrapeButton.Content = Busy && actionName == "guardando" ? "Guardando…" : "Guardar en la base";
-            LoadButton.Content = Busy && actionName == "cargando" ? "Cargando…" : "Cargar base de datos";
-            SearchButton.IsEnabled = ScrapeButton.IsEnabled = LoadButton.IsEnabled = GoButton.IsEnabled = !Busy;
+            SearchButton.IsEnabled = ScrapeButton.IsEnabled = GoButton.IsEnabled = !Busy;
             ExportButton.IsEnabled = count > 0;
         }
 
@@ -162,27 +156,6 @@ namespace LoboEstepario.Pages
         }
 
         // ------------------------------------------------------------------ Filtros
-
-        private void Filter_Changed(object sender, RoutedEventArgs e)
-        {
-            if (!initialized) return;
-            view.Refresh();
-            RefreshState();
-        }
-
-        private bool MatchesSearch(object item)
-        {
-            var c = (CompanyRow)item;
-            var query = SearchBox.Text.Trim();
-            var matches = (string.IsNullOrWhiteSpace(query)
-                    || Has(c.Name, query) || Has(c.Industry, query) || Has(c.CategoryTag, query) || Has(c.Location, query))
-                && Contains(c.Country, CountryBox.Text)
-                && Contains(c.Region, RegionBox.Text)
-                && Contains(c.City, CityBox.Text)
-                && (OnlyEmail.IsChecked != true || c.HasEmail)
-                && (OnlyPhone.IsChecked != true || c.HasPhone);
-            return matches;
-        }
 
         private static bool Has(string value, string query)
         {
@@ -343,47 +316,6 @@ namespace LoboEstepario.Pages
             get { return CategoryBox.SelectedValue as string ?? ""; }
         }
 
-        private string SavedCategoryFilter
-        {
-            get { return SavedCategoryBox.SelectedValue as string ?? ""; }
-        }
-
-        private async Task LoadSavedCategoriesAsync()
-        {
-            try
-            {
-                var list = await GetAsync<List<string>>("api/business/categories");
-                ResetSavedCategories(list ?? new List<string>());
-                categoriesLoaded = true;
-            }
-            catch (Exception)
-            {
-                ResetSavedCategories(new List<string>());
-            }
-        }
-
-        private void ResetSavedCategories(List<string> cats)
-        {
-            var keep = SavedCategoryBox.SelectedValue as string ?? "";
-            loadingCategories = true;
-            var items = new List<CategoryItem> { new CategoryItem { Slug = "", Label = "-- Todas las categorías --" } };
-            items.AddRange(cats.Select(s => new CategoryItem { Slug = s, Label = s }));
-            SavedCategoryBox.ItemsSource = items;
-            SavedCategoryBox.SelectedValue = items.Any(i => i.Slug == keep) ? keep : "";
-            loadingCategories = false;
-        }
-
-        private async void SavedCategory_Changed(object sender, SelectionChangedEventArgs e)
-        {
-            if (!initialized || loadingCategories) return;
-            await LoadSavedAsync();
-        }
-
-        private async void Load_Click(object sender, RoutedEventArgs e)
-        {
-            await LoadSavedAsync();
-        }
-
         private async Task<T> GetAsync<T>(string url) where T : class
         {
             using (var resp = await ApiClientFactory.Client.GetAsync(url))
@@ -411,19 +343,6 @@ namespace LoboEstepario.Pages
             if (!string.IsNullOrWhiteSpace(name)) q.Append("&nameContains=" + Uri.EscapeDataString(name.Trim()));
             q.Append("&limit=100");
             return q.ToString();
-        }
-
-        private async Task LoadSavedAsync()
-        {
-            await RunAsync("cargando", async () =>
-            {
-                var filter = SavedCategoryFilter;
-                var list = await ListBusinessesAsync(filter) ?? new List<BusinessDto>();
-                SetCompanies(list.Select(FromBusiness), "Base de datos");
-                SetStatus(list.Count + " negocios cargados desde la base de datos" +
-                          (string.IsNullOrWhiteSpace(filter) ? "." : " en la categoría «" + filter + "»."), false);
-                await LoadSavedCategoriesAsync();
-            });
         }
 
         private async void Search_Click(object sender, RoutedEventArgs e)
@@ -461,7 +380,6 @@ namespace LoboEstepario.Pages
                 }
                 SetStatus("Scrape completo · " + result.FetchedCount + " obtenidos, " + result.PersistedCount +
                           " guardados en la base (categoría «" + SelectedCategory + "»).", false);
-                await LoadSavedCategoriesAsync();
                 var list = await ListBusinessesAsync(SelectedCategory) ?? new List<BusinessDto>();
                 SetCompanies(list.Select(FromBusiness), "Base de datos");
             });

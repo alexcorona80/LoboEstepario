@@ -15,14 +15,9 @@
     </StackPanel>
 
     <Grid>
-      <Grid.ColumnDefinitions>
-        <ColumnDefinition Width="*"/>
-        <ColumnDefinition Width="20"/>
-        <ColumnDefinition Width="*"/>
-      </Grid.ColumnDefinitions>
 
       <!-- Prospección -->
-      <Border Grid.Column="0" Style="{StaticResource Card}" VerticalAlignment="Top">
+      <Border Style="{StaticResource Card}" VerticalAlignment="Top">
         <StackPanel>
           <DockPanel Margin="0,0,0,14">
             <TextBlock DockPanel.Dock="Right" Text="búsqueda en el catálogo mundial" Style="{StaticResource Hint}" VerticalAlignment="Center"/>
@@ -89,53 +84,6 @@
             <Button x:Name="ScrapeButton" Content="Guardar en la base" Style="{StaticResource VioletButton}" Click="Scrape_Click"
                     ToolTip="Consulta Overture y guarda los negocios en MongoDB categorizados"/>
           </WrapPanel>
-        </StackPanel>
-      </Border>
-
-      <!-- Base guardada -->
-      <Border Grid.Column="2" Style="{StaticResource Card}" VerticalAlignment="Top">
-        <StackPanel>
-          <DockPanel Margin="0,0,0,14">
-            <TextBlock DockPanel.Dock="Right" Text="negocios en MongoDB por categoría" Style="{StaticResource Hint}" VerticalAlignment="Center"/>
-            <TextBlock Text="Base de datos guardada" Style="{StaticResource SectionTitle}"/>
-          </DockPanel>
-
-          <TextBlock Text="FILTRAR POR CATEGORÍA GUARDADA" Style="{StaticResource FieldLabel}"/>
-          <ComboBox x:Name="SavedCategoryBox" DisplayMemberPath="Label" SelectedValuePath="Slug" Margin="0,6,0,12" SelectionChanged="SavedCategory_Changed"/>
-
-          <Button x:Name="LoadButton" Content="Cargar base de datos" Click="Load_Click"/>
-
-          <TextBox x:Name="SearchBox" Margin="0,16,0,0" TextChanged="Filter_Changed"
-                   ToolTip="Buscar por nombre, categoría o ubicación…"/>
-          <TextBlock Style="{StaticResource Hint}" Margin="0,4,0,0" Text="Buscar por nombre, categoría o ubicación…"/>
-
-          <Grid Margin="0,14,0,0">
-            <Grid.ColumnDefinitions>
-              <ColumnDefinition Width="*"/>
-              <ColumnDefinition Width="12"/>
-              <ColumnDefinition Width="*"/>
-              <ColumnDefinition Width="12"/>
-              <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
-            <StackPanel>
-              <TextBlock Text="PAÍS" Style="{StaticResource FieldLabel}"/>
-              <TextBox x:Name="CountryBox" Margin="0,6,0,0" TextChanged="Filter_Changed"/>
-            </StackPanel>
-            <StackPanel Grid.Column="2">
-              <TextBlock Text="REGIÓN / ESTADO" Style="{StaticResource FieldLabel}"/>
-              <TextBox x:Name="RegionBox" Margin="0,6,0,0" TextChanged="Filter_Changed"/>
-            </StackPanel>
-            <StackPanel Grid.Column="4">
-              <TextBlock Text="CIUDAD" Style="{StaticResource FieldLabel}"/>
-              <TextBox x:Name="CityBox" Margin="0,6,0,0" TextChanged="Filter_Changed"/>
-            </StackPanel>
-          </Grid>
-
-          <DockPanel Margin="0,14,0,0" LastChildFill="False">
-            <CheckBox x:Name="OnlyEmail" Content="Solo con correo" Checked="Filter_Changed" Unchecked="Filter_Changed" VerticalAlignment="Center" Margin="0,0,20,0"/>
-            <CheckBox x:Name="OnlyPhone" Content="Solo con teléfono" Checked="Filter_Changed" Unchecked="Filter_Changed" VerticalAlignment="Center"/>
-            <TextBlock x:Name="CountText" DockPanel.Dock="Right" Style="{StaticResource Hint}" VerticalAlignment="Center" Text="0 resultado(s)"/>
-          </DockPanel>
         </StackPanel>
       </Border>
     </Grid>
