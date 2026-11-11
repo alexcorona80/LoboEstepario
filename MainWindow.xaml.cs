@@ -64,7 +64,8 @@ namespace LoboEstepario
             BuildNavigation();
             Loaded += async (sender, args) =>
             {
-                await NavigateAsync(Routes.Inicio);
+                var start = Environment.GetEnvironmentVariable("LOBO_START_PAGE");
+                await NavigateAsync(string.IsNullOrWhiteSpace(start) ? Routes.Inicio : start.Trim().ToLowerInvariant());
                 await StartApiStatusAsync();
             };
         }

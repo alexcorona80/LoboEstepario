@@ -456,8 +456,8 @@
       <Setter.Value>
         <ControlTemplate TargetType="TextBox">
           <Border x:Name="Chrome" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
-                  BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="{StaticResource RadiusControl}" SnapsToDevicePixels="True" Padding="{TemplateBinding Padding}">
-            <ScrollViewer x:Name="PART_ContentHost" Padding="0" VerticalAlignment="{TemplateBinding VerticalContentAlignment}" Focusable="False"/>
+                  BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="{StaticResource RadiusControl}" SnapsToDevicePixels="True">
+            <ScrollViewer x:Name="PART_ContentHost" VerticalAlignment="{TemplateBinding VerticalContentAlignment}" Focusable="False"/>
           </Border>
           <ControlTemplate.Triggers>
             <Trigger Property="IsKeyboardFocused" Value="True">
@@ -496,8 +496,8 @@
       <Setter.Value>
         <ControlTemplate TargetType="PasswordBox">
           <Border x:Name="Chrome" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
-                  BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="{StaticResource RadiusControl}" SnapsToDevicePixels="True" Padding="{TemplateBinding Padding}">
-            <ScrollViewer x:Name="PART_ContentHost" Padding="0" VerticalAlignment="Center" Focusable="False"/>
+                  BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="{StaticResource RadiusControl}" SnapsToDevicePixels="True">
+            <ScrollViewer x:Name="PART_ContentHost" VerticalAlignment="Center" Focusable="False"/>
           </Border>
           <ControlTemplate.Triggers>
             <Trigger Property="IsKeyboardFocused" Value="True">
